@@ -215,6 +215,9 @@ fn parse_chain(
         },
     );
 
+    let cloned = domain.clone();
+    let chain_name = cloned.as_ref();
+
     cfg_unwrap_all!(&chain.cwp, err: [connection, mailbox, interchain_gas_paymaster, validator_announce, merkle_tree_hook]);
     err.into_result(ChainConf {
         domain,
@@ -229,6 +232,7 @@ fn parse_chain(
         connection,
         metrics_conf: Default::default(),
         index: IndexSettings {
+            chain_name: chain_name.to_string(),
             from,
             chunk_size,
             mode,

@@ -294,6 +294,7 @@ where
     ) -> Result<Box<dyn ContractSyncCursor<T>>> {
         let watermark = self.db.retrieve_high_watermark().await.unwrap();
         let index_settings = IndexSettings {
+            chain_name: index_settings.chain_name,
             from: watermark.unwrap_or(index_settings.from),
             chunk_size: index_settings.chunk_size,
             mode: index_settings.mode,
@@ -341,6 +342,7 @@ where
     ) -> Result<Box<dyn ContractSyncCursor<T>>> {
         Ok(Box::new(
             ForwardBackwardSequenceAwareSyncCursor::new(
+                index_settings.chain_name.as_str(),
                 self.indexer.clone(),
                 Arc::new(self.db.clone()),
                 index_settings.chunk_size,

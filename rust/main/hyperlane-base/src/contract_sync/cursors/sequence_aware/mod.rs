@@ -72,6 +72,7 @@ pub(crate) struct ForwardBackwardSequenceAwareSyncCursor<T> {
 impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
     /// Construct a new contract sync helper.
     pub async fn new(
+        chain_name: &str,
         latest_sequence_querier: Arc<dyn SequenceAwareIndexer<T>>,
         db: Arc<dyn HyperlaneSequenceAwareIndexerStoreReader<T>>,
         chunk_size: u32,
@@ -84,6 +85,7 @@ impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
             "Failed to query sequence",
         ))?;
         let forward_cursor = ForwardSequenceAwareSyncCursor::new(
+            chain_name,
             chunk_size,
             latest_sequence_querier.clone(),
             db.clone(),
@@ -91,8 +93,14 @@ impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
             tip,
             mode,
         );
-        let backward_cursor =
-            BackwardSequenceAwareSyncCursor::new(chunk_size, db, sequence_count, tip, mode);
+        let backward_cursor = BackwardSequenceAwareSyncCursor::new(
+            chain_name,
+            chunk_size,
+            db,
+            sequence_count,
+            tip,
+            mode,
+        );
         Ok(Self {
             forward: forward_cursor,
             backward: backward_cursor,
