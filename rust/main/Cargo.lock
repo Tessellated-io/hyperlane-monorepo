@@ -10387,7 +10387,6 @@ dependencies = [
  "hyperlane-cosmos",
  "hyperlane-ethereum",
  "hyperlane-test",
- "itertools 0.10.5",
  "k256 0.13.4",
  "mockall",
  "prometheus",
@@ -10399,7 +10398,6 @@ dependencies = [
  "tokio-test",
  "tracing",
  "tracing-futures",
- "url",
 ]
 
 [[package]]

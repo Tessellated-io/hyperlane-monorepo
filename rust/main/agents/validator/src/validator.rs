@@ -1,13 +1,12 @@
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
 
-use crate::{server as validator_server, settings::SingleValidatorSettings};
+use crate::server as validator_server;
 use async_trait::async_trait;
 use derive_more::AsRef;
 use eyre::Result;
 
 use futures::future::join_all;
 use futures_util::future::try_join_all;
-use serde::de;
 use tokio::{task::JoinHandle, time::sleep};
 use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
 
@@ -56,8 +55,8 @@ impl BaseAgent for Validator {
         let contract_sync_metrics = Arc::new(ContractSyncMetrics::new(&metrics));
 
         let mut validators: Vec<SingleValidator> = vec![];
-        let numVals = settings.validators.len();
-        for valIdx in 0..numVals {
+        let num_vals = settings.validators.len();
+        for val_idx in 0..num_vals {
             let wrapped = SingleValidator::make_validator(
                 agent_metadata.clone(),
                 &settings,
@@ -65,7 +64,7 @@ impl BaseAgent for Validator {
                 agent_metrics.clone(),
                 chain_metrics.clone(),
                 &_tokio_console_server,
-                valIdx,
+                val_idx,
                 &contract_sync_metrics,
             )
             .await?;
@@ -126,56 +125,56 @@ impl SingleValidator {
         chain_metrics: ChainMetrics,
         _tokio_console_server: &console_subscriber::Server,
         index: usize,
-        contractSyncMetrics: &Arc<ContractSyncMetrics>,
+        contract_sync_metrics: &Arc<ContractSyncMetrics>,
     ) -> Result<Self>
     where
         Self: Sized,
     {
-        let validatorSettings = &settings.validators[index];
+        let validator_settings = &settings.validators[index];
 
-        let db = DB::from_path(&validatorSettings.db)?;
-        let msg_db = HyperlaneRocksDB::new(&validatorSettings.origin_chain, db);
+        let db = DB::from_path(&validator_settings.db)?;
+        let msg_db = HyperlaneRocksDB::new(&validator_settings.origin_chain, db);
 
         // Intentionally using hyperlane_ethereum for the validator's signer
         let (signer_instance, signer) =
-            SingletonSigner::new(validatorSettings.validator.build().await?);
+            SingletonSigner::new(validator_settings.validator.build().await?);
 
         let core = settings.build_hyperlane_core(metrics.clone());
-        let checkpoint_syncer = validatorSettings
+        let checkpoint_syncer = validator_settings
             .checkpoint_syncer
             .build_and_validate(None)
             .await?
             .into();
 
         let mailbox = settings
-            .build_mailbox(&validatorSettings.origin_chain, &metrics)
+            .build_mailbox(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let merkle_tree_hook = settings
-            .build_merkle_tree_hook(&validatorSettings.origin_chain, &metrics)
+            .build_merkle_tree_hook(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let validator_announce = settings
-            .build_validator_announce(&validatorSettings.origin_chain, &metrics)
+            .build_validator_announce(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let origin_chain_conf = core
             .settings
-            .chain_setup(&validatorSettings.origin_chain)
+            .chain_setup(&validator_settings.origin_chain)
             .unwrap()
             .clone();
 
         let merkle_tree_hook_sync = settings
             .sequenced_contract_sync::<MerkleTreeInsertion, _>(
-                &validatorSettings.origin_chain,
+                &validator_settings.origin_chain,
                 &metrics,
-                &contractSyncMetrics,
+                &contract_sync_metrics,
                 msg_db.clone().into(),
             )
             .await?;
 
         Ok(Self {
-            origin_chain: validatorSettings.origin_chain.clone(),
+            origin_chain: validator_settings.origin_chain.clone(),
             origin_chain_conf,
             core,
             db: msg_db,
@@ -185,8 +184,8 @@ impl SingleValidator {
             validator_announce: validator_announce.into(),
             signer,
             signer_instance: Some(Box::new(signer_instance)),
-            reorg_period: validatorSettings.reorg_period,
-            interval: validatorSettings.interval,
+            reorg_period: validator_settings.reorg_period,
+            interval: validator_settings.interval,
             checkpoint_syncer,
             agent_metrics,
             chain_metrics,

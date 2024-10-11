@@ -6,28 +6,20 @@
 
 use std::{collections::HashSet, path::PathBuf, time::Duration};
 
-use itertools::Itertools;
-
 use derive_more::{AsMut, AsRef, Deref, DerefMut};
 use eyre::{eyre, Context};
 use hyperlane_base::{
     impl_loadable_from_settings,
     settings::{
         parser::{RawAgentConf, RawAgentSignerConf, ValueParser},
-        ChainConnectionConf, CheckpointSyncerConf, Settings, SignerConf,
+        CheckpointSyncerConf, Settings, SignerConf,
     },
 };
-use hyperlane_core::{cfg_unwrap_all, config::*, HyperlaneDomain, HyperlaneDomainProtocol};
-use hyperlane_cosmos::{NativeToken, RawCosmosAmount};
-use hyperlane_ethereum::{ConnectionConf, RpcConnectionConf};
+use hyperlane_core::{cfg_unwrap_all, config::*, HyperlaneDomain};
 use serde::Deserialize;
 use serde_json::Value;
-use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
 
-use hyperlane_core::IndexMode;
-use url::Url;
-
-use std::{collections::HashMap, default::Default};
+use std::default::Default;
 /// Settings for `Validator`
 #[derive(Debug, AsRef, AsMut, Deref, DerefMut)]
 pub struct ValidatorSettings {
@@ -121,7 +113,6 @@ fn parse_validator(
         .get_key("originChainName")
         .parse_string()
         .end();
-    println!("read origin chain as {}", origin_chain_name.unwrap());
 
     let db = p
         .chain(&mut err)

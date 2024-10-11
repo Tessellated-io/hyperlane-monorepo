@@ -27,12 +27,10 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["rt", "macros", "parking_lot"] }
 tracing-futures.workspace = true
 tracing.workspace = true
-itertools.workspace = true
-url.workspace = true
 
 hyperlane-core = { path = "../../hyperlane-core", features = [
-  "agent",
-  "async",
+    "agent",
+    "async",
 ] }
 hyperlane-base = { path = "../../hyperlane-base" }
 hyperlane-ethereum = { path = "../../chains/hyperlane-ethereum" }
@@ -44,9 +42,7 @@ tokio-test.workspace = true
 reqwest.workspace = true
 hyperlane-test = { path = "../../hyperlane-test" }
 k256.workspace = true
-hyperlane-ethereum = { path = "../../chains/hyperlane-ethereum", features = [
-  "test-utils",
-] }
+hyperlane-ethereum = { path = "../../chains/hyperlane-ethereum", features = ["test-utils"] }
 
 [features]
 default = ["color-eyre", "oneline-errors"]
