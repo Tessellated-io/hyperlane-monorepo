@@ -52,9 +52,9 @@ impl From<Level> for LevelFilter {
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 pub struct TracingConfig {
     #[serde(default)]
-    pub fmt: Style,
+    pub(crate) fmt: Style,
     #[serde(default)]
-    pub level: Level,
+    pub(crate) level: Level,
 }
 
 impl TracingConfig {
