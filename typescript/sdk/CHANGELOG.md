@@ -1,5 +1,17 @@
 # @hyperlane-xyz/sdk
 
+## 5.6.0
+
+### Minor Changes
+
+- 46044a2e9: Deploy to odysseytestnet
+- 8001bbbd6: Add override to some transactions to fix warp apply
+
+### Patch Changes
+
+- @hyperlane-xyz/utils@5.6.0
+- @hyperlane-xyz/core@5.4.2
+
 ## 5.5.0
 
 ### Minor Changes
