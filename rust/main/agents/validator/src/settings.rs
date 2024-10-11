@@ -40,7 +40,7 @@ pub struct ValidatorSettings {
     pub validators: Vec<SingleValidatorSettings>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SingleValidatorSettings {
     /// Database path
     pub db: PathBuf,
@@ -54,19 +54,6 @@ pub struct SingleValidatorSettings {
     pub reorg_period: u64,
     /// How frequently to check for new checkpoints
     pub interval: Duration,
-}
-
-impl Clone for SingleValidatorSettings {
-    fn clone(&self) -> Self {
-        Self {
-            db: self.db.clone(),
-            origin_chain: self.origin_chain.clone(),
-            validator: self.validator.clone(),
-            checkpoint_syncer: self.checkpoint_syncer.clone(),
-            reorg_period: self.reorg_period.clone(),
-            interval: self.interval.clone(),
-        }
-    }
 }
 
 #[derive(Debug, Deserialize)]
