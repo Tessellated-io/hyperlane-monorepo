@@ -37,11 +37,11 @@ pub struct ValidatorSettings {
     #[deref_mut]
     base: Settings,
 
-    pub validators: Vec<WrappedValidatorSettings>,
+    pub validators: Vec<SingleValidatorSettings>,
 }
 
 #[derive(Debug)]
-pub struct WrappedValidatorSettings {
+pub struct SingleValidatorSettings {
     /// Database path
     pub db: PathBuf,
     /// Chain to validate messages on
@@ -56,7 +56,7 @@ pub struct WrappedValidatorSettings {
     pub interval: Duration,
 }
 
-impl Clone for WrappedValidatorSettings {
+impl Clone for SingleValidatorSettings {
     fn clone(&self) -> Self {
         Self {
             db: self.db.clone(),
@@ -109,9 +109,9 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
             .unwrap()
             .collect();
 
-        let mut validators: Vec<WrappedValidatorSettings> = vec![];
+        let mut validators: Vec<SingleValidatorSettings> = vec![];
         for parser in validator_parsers {
-            let validator: WrappedValidatorSettings =
+            let validator: SingleValidatorSettings =
                 parse_validator(parser.clone(), Some(&unwrapped_base), cwp);
             validators.push(validator);
         }
@@ -127,7 +127,7 @@ fn parse_validator(
     p: ValueParser,
     base: Option<&Settings>,
     cwp: &ConfigPath,
-) -> WrappedValidatorSettings {
+) -> SingleValidatorSettings {
     let mut err = ConfigParsingError::default();
     println!("running parse validator");
 
@@ -186,7 +186,7 @@ fn parse_validator(
         .parse_u64()
         .unwrap_or(1);
 
-    let validator_settings: WrappedValidatorSettings = WrappedValidatorSettings {
+    let validator_settings: SingleValidatorSettings = SingleValidatorSettings {
         db: db.clone(),
         checkpoint_syncer: checkpoint_syncer.unwrap().clone(),
         interval,

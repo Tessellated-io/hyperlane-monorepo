@@ -1,6 +1,6 @@
 use std::{num::NonZeroU64, sync::Arc, time::Duration};
 
-use crate::{server as validator_server, settings::WrappedValidatorSettings};
+use crate::{server as validator_server, settings::SingleValidatorSettings};
 use async_trait::async_trait;
 use derive_more::AsRef;
 use eyre::Result;
