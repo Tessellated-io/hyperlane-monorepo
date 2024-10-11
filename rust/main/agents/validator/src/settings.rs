@@ -68,27 +68,19 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
         cwp: &ConfigPath,
         _filter: (),
     ) -> ConfigResult<Self> {
-        println!("running raw config load {}", raw.0);
-
         let mut err = ConfigParsingError::default();
-
         let p = ValueParser::new(cwp.clone(), &raw.0);
 
-        // let base = parse_base(p.clone(), cwp);
-
-        // let origin_chain_name_set = origin_chain_name.map(|s| HashSet::from([s]));
-
+        // Parse the base config
         let base: Option<Settings> = p
             .parse_from_raw_config::<Settings, RawAgentConf, Option<&HashSet<&str>>>(
-                None, // origin_chain_name_set.as_ref(),
+                None,
                 "Expected valid base agent configuration",
             )
             .take_config_err(&mut err);
         let unwrapped_base = base.unwrap();
 
-        // let unwrappedBase = base.unwrap();
-        // info!(unwrappedBase.chains["ethereum"].connection);
-
+        // Collect value parsers for each single validator config
         let validator_parsers: Vec<ValueParser> = p
             .chain(&mut err)
             .get_key("validators")
@@ -96,6 +88,7 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
             .unwrap()
             .collect();
 
+        // Parse validator configs
         let mut validators: Vec<SingleValidatorSettings> = vec![];
         for parser in validator_parsers {
             let validator: SingleValidatorSettings =
@@ -116,7 +109,6 @@ fn parse_validator(
     cwp: &ConfigPath,
 ) -> SingleValidatorSettings {
     let mut err = ConfigParsingError::default();
-    println!("running parse validator");
 
     let checkpoint_syncer = p
         .chain(&mut err)
