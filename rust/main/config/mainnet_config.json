@@ -564,10 +564,10 @@
       "aggregationHook": "0x8007d1e60991fB9BE1be26f70A7cE284fdE7da97",
       "blockExplorers": [
         {
-          "apiUrl": "https://fetascan.xyz/api",
+          "apiUrl": "https://fetascan.io/api",
           "family": "blockscout",
           "name": "Fetascan",
-          "url": "https://fetascan.xyz"
+          "url": "https://fetascan.io"
         }
       ],
       "blocks": {
@@ -2077,11 +2077,6 @@
           "http": "https://rpc-kralum.neutron-1.neutron.org"
         }
       ],
-      "signer": {
-        "key": "0x5486418967eabc770b0fcb995f7ef6d9a72f7fc195531ef76c5109f44f51af26",
-        "prefix": "neutron",
-        "type": "cosmosKey"
-      },
       "slip44": 118,
       "validatorAnnounce": "0xf3aa0d652226e21ae35cd9035c492ae41725edc9036edf0d6a48701b153b90a0"
     },
@@ -2210,11 +2205,6 @@
           "http": "https://osmosis-rpc.publicnode.com"
         }
       ],
-      "signer": {
-        "key": "0x5486418967eabc770b0fcb995f7ef6d9a72f7fc195531ef76c5109f44f51af26",
-        "prefix": "osmo",
-        "type": "cosmosKey"
-      },
       "slip44": 118,
       "validatorAnnounce": "0xaf867da5b09a20ee49161d57f99477c0c42d100f34eb53da0d2eb7fc6c257235"
     },
