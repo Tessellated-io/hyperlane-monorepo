@@ -58,8 +58,6 @@ impl BaseAgent for Validator {
         let mut validators: Vec<SingleValidator> = vec![];
         let numVals = settings.validators.len();
         for valIdx in 0..numVals {
-            println!("loading validator at idx {valIdx} (total: {numVals}");
-
             let wrapped = SingleValidator::make_validator(
                 agent_metadata.clone(),
                 &settings,
@@ -73,9 +71,7 @@ impl BaseAgent for Validator {
             .await?;
 
             validators.push(wrapped);
-            println!("done making val  at idx {valIdx} (total: {numVals}");
         }
-        println!("done making vals");
 
         Ok(Self {
             validators: validators,
@@ -84,8 +80,6 @@ impl BaseAgent for Validator {
 
     #[allow(clippy::async_yields_async)]
     async fn run(mut self) {
-        println!("run!");
-
         // Create a collection of futures by calling `run` on each Foo
         let futures = self
             .validators
@@ -137,42 +131,43 @@ impl SingleValidator {
     where
         Self: Sized,
     {
-        let wrapped = &settings.validators[index];
+        let validatorSettings = &settings.validators[index];
 
-        let db = DB::from_path(&wrapped.db)?;
-        let msg_db = HyperlaneRocksDB::new(&wrapped.origin_chain, db);
+        let db = DB::from_path(&validatorSettings.db)?;
+        let msg_db = HyperlaneRocksDB::new(&validatorSettings.origin_chain, db);
 
         // Intentionally using hyperlane_ethereum for the validator's signer
-        let (signer_instance, signer) = SingletonSigner::new(wrapped.validator.build().await?);
+        let (signer_instance, signer) =
+            SingletonSigner::new(validatorSettings.validator.build().await?);
 
         let core = settings.build_hyperlane_core(metrics.clone());
-        let checkpoint_syncer = wrapped
+        let checkpoint_syncer = validatorSettings
             .checkpoint_syncer
             .build_and_validate(None)
             .await?
             .into();
 
         let mailbox = settings
-            .build_mailbox(&wrapped.origin_chain, &metrics)
+            .build_mailbox(&validatorSettings.origin_chain, &metrics)
             .await?;
 
         let merkle_tree_hook = settings
-            .build_merkle_tree_hook(&wrapped.origin_chain, &metrics)
+            .build_merkle_tree_hook(&validatorSettings.origin_chain, &metrics)
             .await?;
 
         let validator_announce = settings
-            .build_validator_announce(&wrapped.origin_chain, &metrics)
+            .build_validator_announce(&validatorSettings.origin_chain, &metrics)
             .await?;
 
         let origin_chain_conf = core
             .settings
-            .chain_setup(&wrapped.origin_chain)
+            .chain_setup(&validatorSettings.origin_chain)
             .unwrap()
             .clone();
 
         let merkle_tree_hook_sync = settings
             .sequenced_contract_sync::<MerkleTreeInsertion, _>(
-                &wrapped.origin_chain,
+                &validatorSettings.origin_chain,
                 &metrics,
                 &contractSyncMetrics,
                 msg_db.clone().into(),
@@ -180,7 +175,7 @@ impl SingleValidator {
             .await?;
 
         Ok(Self {
-            origin_chain: wrapped.origin_chain.clone(),
+            origin_chain: validatorSettings.origin_chain.clone(),
             origin_chain_conf,
             core,
             db: msg_db,
@@ -190,8 +185,8 @@ impl SingleValidator {
             validator_announce: validator_announce.into(),
             signer,
             signer_instance: Some(Box::new(signer_instance)),
-            reorg_period: wrapped.reorg_period,
-            interval: wrapped.interval,
+            reorg_period: validatorSettings.reorg_period,
+            interval: validatorSettings.interval,
             checkpoint_syncer,
             agent_metrics,
             chain_metrics,

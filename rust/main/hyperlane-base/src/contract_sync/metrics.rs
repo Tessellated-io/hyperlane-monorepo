@@ -25,8 +25,6 @@ pub struct ContractSyncMetrics {
 impl ContractSyncMetrics {
     /// Instantiate a new ContractSyncMetrics object.
     pub fn new(metrics: &CoreMetrics) -> Self {
-        // println!("registering metrics on chain {}");
-
         let indexed_height = metrics
             .new_int_gauge(
                 "contract_sync_block_height",
