@@ -182,6 +182,7 @@ where
                     estimated_time_to_sync = fmt_sync_time(eta),
                     sequences = ?logs.iter().map(|(log, meta)| IndexedTxIdAndSequence::new(meta.transaction_id, log.sequence)).collect::<Vec<_>>(),
                     cursor = ?cursor,
+                    chain = self.domain.as_ref(),
                     "Found log(s) in index range"
                 );
 

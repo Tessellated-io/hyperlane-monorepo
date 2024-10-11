@@ -14,6 +14,7 @@ use eyre::{eyre, Context};
 use itertools::Itertools;
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
 use url::Url;
 
 use h_cosmos::RawCosmosAmount;
@@ -46,6 +47,7 @@ impl FromRawConf<RawAgentConf, Option<&HashSet<&str>>> for Settings {
         filter: Option<&HashSet<&str>>,
     ) -> Result<Self, ConfigParsingError> {
         let mut err = ConfigParsingError::default();
+        println!("parsing configs2!");
 
         let p = ValueParser::new(cwp.clone(), &raw.0);
 
@@ -124,6 +126,9 @@ fn parse_chain(
     default_rpc_consensus_type: &str,
 ) -> ConfigResult<ChainConf> {
     let mut err = ConfigParsingError::default();
+    println!("read chain!");
+
+    warn!(chain=%name, "read chain name");
 
     let domain = parse_domain(chain.clone(), name).take_config_err(&mut err);
     let signer = chain
@@ -287,6 +292,9 @@ fn parse_domain(chain: ValueParser, name: &str) -> ConfigResult<HyperlaneDomain>
 /// Expects AgentSigner.
 fn parse_signer(signer: ValueParser) -> ConfigResult<SignerConf> {
     let mut err = ConfigParsingError::default();
+
+    warn!("parsing signer");
+    println!("read signer!");
 
     let signer_type = signer
         .chain(&mut err)

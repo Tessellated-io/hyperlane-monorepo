@@ -52,6 +52,7 @@ where
         .unwrap_or_default();
 
     for path in &config_file_paths {
+        println!("loading config at path {path}");
         let p = PathBuf::from(path);
         if p.is_file() {
             if p.extension() == Some("json".as_ref()) {
@@ -76,6 +77,7 @@ where
             .into_config_result(|| root_path.clone());
         }
     }
+    println!("all configs are now loaded");
 
     let config_deserializer = builder
         // Use a base configuration env variable prefix
