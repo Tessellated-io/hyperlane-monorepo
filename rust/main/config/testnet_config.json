@@ -1730,6 +1730,10 @@
       "validatorAnnounce": "0x867f2089D09903f208AeCac84E599B90E5a4A821",
       "index": {
         "from": 5243565
+      },
+      "deployer": {
+        "name": "Abacus Works",
+        "url": "https://www.hyperlane.xyz"
       }
     },
     "sonictestnet": {
@@ -1789,6 +1793,10 @@
       "validatorAnnounce": "0xD356C996277eFb7f75Ee8bd61b31cC781A12F54f",
       "index": {
         "from": 78198240
+      },
+      "deployer": {
+        "name": "Abacus Works",
+        "url": "https://www.hyperlane.xyz"
       }
     },
     "unichaintestnet": {
@@ -1848,6 +1856,10 @@
       "validatorAnnounce": "0xD356C996277eFb7f75Ee8bd61b31cC781A12F54f",
       "index": {
         "from": 1721192
+      },
+      "deployer": {
+        "name": "Abacus Works",
+        "url": "https://www.hyperlane.xyz"
       }
     }
   },
