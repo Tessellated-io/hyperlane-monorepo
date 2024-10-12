@@ -202,11 +202,26 @@ fn parse_checkpoint_syncer(syncer: ValueParser) -> ConfigResult<CheckpointSyncer
                 .end()
                 .map(str::to_owned);
 
-            cfg_unwrap_all!(&syncer.cwp, err: [bucket, region]);
+            let aws_access_key_id = syncer
+                .chain(&mut err)
+                .get_key("awsAccessKeyId")
+                .parse_string()
+                .end()
+                .map(str::to_owned);
+            let aws_access_key_secret = syncer
+                .chain(&mut err)
+                .get_key("awsAccessKeySecret")
+                .parse_string()
+                .end()
+                .map(str::to_owned);
+
+            cfg_unwrap_all!(&syncer.cwp, err: [bucket, region, aws_access_key_id, aws_access_key_secret]);
             err.into_result(CheckpointSyncerConf::S3 {
                 bucket,
                 region,
                 folder,
+                aws_access_key_id,
+                aws_access_key_secret,
             })
         }
         Some("gcs") => {

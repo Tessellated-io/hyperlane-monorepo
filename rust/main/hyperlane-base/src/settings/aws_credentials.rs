@@ -3,10 +3,9 @@
 
 use async_trait::async_trait;
 use rusoto_core::credential::{
-    AutoRefreshingProvider, AwsCredentials, CredentialsError, EnvironmentProvider,
-    ProvideAwsCredentials,
+    AwsCredentials, CredentialsError, EnvironmentProvider, ProvideAwsCredentials,
 };
-use rusoto_sts::WebIdentityProvider;
+use std::collections::BTreeMap;
 
 /// Provides AWS credentials from multiple possible sources using a priority order.
 /// The following sources are checked in order for credentials when calling credentials. More sources may be supported in future if a need be.
@@ -18,33 +17,23 @@ use rusoto_sts::WebIdentityProvider;
 /// with [IAM Roles for Service Accounts (IRSA)](https://aws.amazon.com/blogs/containers/diving-into-iam-roles-for-service-accounts/).
 /// The IRSA approach follows security best practices and allows for key rotation.
 pub(crate) struct AwsChainCredentialsProvider {
-    environment_provider: EnvironmentProvider,
-    web_identity_provider: AutoRefreshingProvider<WebIdentityProvider>,
+    pub key: String,
+    pub secret: String,
 }
 
 impl AwsChainCredentialsProvider {
-    pub fn new() -> Self {
-        // Wrap the `WebIdentityProvider` to a caching `AutoRefreshingProvider`.
-        // By default, the `WebIdentityProvider` requests AWS Credentials on each call to `credentials()`
-        // To save the CPU/network and AWS bills, the `AutoRefreshingProvider` allows to cache the credentials until the expire.
-        let auto_refreshing_provider =
-            AutoRefreshingProvider::new(WebIdentityProvider::from_k8s_env())
-                .expect("Always returns Ok(...)");
-        AwsChainCredentialsProvider {
-            environment_provider: EnvironmentProvider::default(),
-            web_identity_provider: auto_refreshing_provider,
-        }
+    pub fn new(key: &str, secret: &str) -> Self {
+        return AwsChainCredentialsProvider {
+            key: key.to_string(),
+            secret: secret.to_string(),
+        };
     }
 }
 
 #[async_trait]
 impl ProvideAwsCredentials for AwsChainCredentialsProvider {
     async fn credentials(&self) -> Result<AwsCredentials, CredentialsError> {
-        if let Ok(creds) = self.environment_provider.credentials().await {
-            Ok(creds)
-        } else {
-            // Propagate errors from the 'WebIdentityProvider'.
-            self.web_identity_provider.credentials().await
-        }
+        let credentials = AwsCredentials::new(self.key.clone(), self.secret.clone(), None, None);
+        return Ok(credentials);
     }
 }

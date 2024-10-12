@@ -114,7 +114,7 @@ impl Settings {
     }
 }
 
-/// Generate a call to ChainSetup for the given builder
+/// Generate a call to ChainSetup forc the given builder
 macro_rules! build_contract_fns {
     ($singular:ident, $plural:ident -> $ret:ty) => {
         /// Delegates building to ChainSetup

@@ -153,6 +153,7 @@ pub struct CoreContractAddresses {
 /// Indexing settings
 #[derive(Debug, Default, Clone)]
 pub struct IndexSettings {
+    /// The chain being indexed.
     pub chain_name: String,
 
     /// The height at which to start indexing contracts.

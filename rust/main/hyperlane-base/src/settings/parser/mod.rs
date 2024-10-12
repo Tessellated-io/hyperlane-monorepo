@@ -109,6 +109,7 @@ impl FromRawConf<RawAgentConf, Option<&HashSet<&str>>> for Settings {
             })
             .collect();
 
+
         err.into_result(Self {
             chains,
             metrics_port,
