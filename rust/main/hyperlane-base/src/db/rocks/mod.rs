@@ -2,7 +2,10 @@ use std::{path::Path, sync::Arc};
 
 use super::error::DbError;
 use rocksdb::{Options, DB as Rocks};
-use tracing::info;
+use std::fs;
+use std::io::Result as IoResult;
+use std::os::unix::fs::PermissionsExt;
+use tracing::{error, info};
 
 pub use hyperlane_db::*;
 pub use typed_db::*;
@@ -31,10 +34,36 @@ impl From<Rocks> for DB {
 
 type Result<T> = std::result::Result<T, DbError>;
 
+// Thank you, ChatGPT
+fn create_directory_if_not_exists(dir_path: &Path) -> IoResult<()> {
+    // Check if the directory already exists
+    if !dir_path.exists() {
+        // Create the directory
+        fs::create_dir(dir_path)?;
+
+        // Set the directory permissions to 700
+        let permissions = fs::Permissions::from_mode(0o700);
+        fs::set_permissions(dir_path, permissions)?;
+
+        info!(path = dir_path.to_str(), "created missing db folder");
+    }
+
+    Ok(())
+}
+
 impl DB {
     /// Opens db at `db_path` and creates if missing
     #[tracing::instrument(err)]
     pub fn from_path(db_path: &Path) -> Result<DB> {
+        match create_directory_if_not_exists(db_path) {
+            Ok(()) => {}
+            Err(e) => error!(
+                error = e.to_string(),
+                folder = db_path.to_str(),
+                "unable to create db folder"
+            ),
+        }
+
         let path = {
             let mut path = db_path
                 .parent()
