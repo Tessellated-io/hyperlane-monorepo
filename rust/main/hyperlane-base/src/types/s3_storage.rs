@@ -12,6 +12,7 @@ use rusoto_core::{
 };
 use rusoto_s3::{GetObjectError, GetObjectRequest, PutObjectRequest, S3Client, S3};
 use tokio::time::timeout;
+use tracing::info;
 
 use crate::types::utils;
 use crate::{
@@ -56,6 +57,13 @@ impl fmt::Debug for S3Storage {
 
 impl S3Storage {
     async fn write_to_bucket(&self, key: String, body: &str) -> Result<()> {
+        info!(
+            key = key.to_string(),
+            body = body,
+            bucket = self.bucket.to_string(),
+            "about to place into s3 bucket"
+        );
+
         let req = PutObjectRequest {
             key: self.get_composite_key(key),
             bucket: self.bucket.clone(),
