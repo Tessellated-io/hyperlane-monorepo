@@ -340,7 +340,11 @@ impl SingleValidator {
         tasks
     }
 
-    fn log_on_announce_failure(result: ChainResult<TxOutcome>, chain_signer: &String) {
+    fn log_on_announce_failure(
+        result: ChainResult<TxOutcome>,
+        chain_signer: &String,
+        origin_chain: &HyperlaneDomain,
+    ) {
         match result {
             Ok(outcome) => {
                 if outcome.executed {
@@ -363,6 +367,7 @@ impl SingleValidator {
                 error!(
                     ?err,
                     ?chain_signer,
+                    chain=origin_chain.name(),
                     "Failed to announce validator. Make sure you have enough funds in your account to pay for gas."
                 );
             }
@@ -446,7 +451,7 @@ impl SingleValidator {
                             .validator_announce
                             .announce(signed_announcement.clone())
                             .await;
-                        Self::log_on_announce_failure(result, &chain_signer);
+                        Self::log_on_announce_failure(result, &chain_signer, &self.origin_chain);
                     }
                 } else {
                     warn!(origin_chain=%self.origin_chain, "Cannot announce validator without a signer; make sure a signer is set for the origin chain");
