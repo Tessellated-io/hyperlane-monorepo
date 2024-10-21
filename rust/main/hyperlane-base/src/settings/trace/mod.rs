@@ -97,10 +97,15 @@ impl TracingConfig {
             metadata.is_event() || metadata.level() <= &LevelFilter::INFO
         });
 
+        let log_format = tracing_fmt::format::Format::default()
+            .compact()
+            .with_target(false)
+            .with_level(true);
         let subscriber = tracing_subscriber::Registry::default().with(
             tracing_fmt::layer()
+                .event_format(log_format)
                 .with_span_events(tracing_fmt::format::FmtSpan::NONE)
-                .with_filter(span_filter),
+                .with_filter(EnvFilter::from_default_env()),
         );
 
         subscriber.try_init()?;
