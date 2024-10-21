@@ -105,6 +105,7 @@ impl ValidatorSubmitter {
             if should_log_checkpoint_info() {
                 info!(
                     ?latest_checkpoint,
+                    chain = self.merkle_tree_hook.domain().id(),
                     tree_count = tree.count(),
                     "Latest checkpoint"
                 );

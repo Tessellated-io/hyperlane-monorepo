@@ -321,6 +321,7 @@ impl<T: Debug> BackwardSequenceAwareSyncCursor<T> {
             ?logs,
             current_indexing_snapshot=?self.current_indexing_snapshot,
             last_indexed_snapshot=?self.last_indexed_snapshot,
+            chain=self.chain_name,
             "Log sequences don't exactly match the expected sequence range, rewinding to last indexed snapshot",
         );
         // Rewind to the last snapshot.

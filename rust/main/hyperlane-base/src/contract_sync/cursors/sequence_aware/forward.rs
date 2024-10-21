@@ -396,6 +396,7 @@ impl<T: Debug> ForwardSequenceAwareSyncCursor<T> {
             current_indexing_snapshot=?self.current_indexing_snapshot,
             last_indexed_snapshot=?self.last_indexed_snapshot,
             target_snapshot=?self.target_snapshot,
+            chain=self.chain_name,
             "Log sequences don't exactly match the expected sequence range, rewinding to last indexed snapshot",
         );
         // If there are any missing sequences, rewind to index immediately after the last snapshot.
