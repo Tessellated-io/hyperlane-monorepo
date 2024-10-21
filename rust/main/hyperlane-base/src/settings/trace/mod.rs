@@ -87,25 +87,21 @@ impl TracingConfig {
                 .with_target("sqlx::query", Level::Warn)
                 .with_target("hyper::", Level::Warn);
         }
-        let fmt_layer: LogOutputLayer<_> = self.fmt.into();
-        let err_layer = tracing_error::ErrorLayer::default();
+        // let fmt_layer: LogOutputLayer<_> = self.fmt.into();
+        // let err_layer = tracing_error::ErrorLayer::default();
 
-        let (tokio_layer, tokio_server) = console_subscriber::ConsoleLayer::new();
+        let (_, tokio_server) = console_subscriber::ConsoleLayer::new();
 
         let span_filter = filter_fn(|metadata| {
             // Only log events (no spans) and filter based on log level
             metadata.is_event() || metadata.level() <= &LevelFilter::INFO
         });
 
-        let subscriber = tracing_subscriber::Registry::default()
-            .with(EnvFilter::from_default_env()) // Allows filtering levels via `RUST_LOG`
-            .with(tokio_layer)
-            .with(target_layer)
-            .with(TimeSpanLifetime::new(metrics))
-            .with(fmt_layer)
-            .with(err_layer)
-            .with(tracing_fmt::layer().with_span_events(tracing_fmt::format::FmtSpan::NONE))
-            .with(tracing_fmt::layer().with_filter(span_filter));
+        let subscriber = tracing_subscriber::Registry::default().with(
+            tracing_fmt::layer()
+                .with_span_events(tracing_fmt::format::FmtSpan::NONE)
+                .with_filter(span_filter),
+        );
 
         subscriber.try_init()?;
         Ok(tokio_server)
