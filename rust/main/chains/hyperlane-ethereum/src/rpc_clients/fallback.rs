@@ -16,6 +16,8 @@ use ethers_prometheus::json_rpc_client::{JsonRpcBlockGetter, PrometheusJsonRpcCl
 
 use crate::rpc_clients::{categorize_client_response, CategorizedResponse};
 
+use super::provider;
+
 /// Wrapper of `FallbackProvider` for use in `hyperlane-ethereum`
 #[derive(new)]
 pub struct EthereumFallbackProvider<C, B>(FallbackProvider<C, B>);
@@ -112,7 +114,9 @@ where
                 let _span =
                     warn_span!("request", fallback_count=%idx, provider_index=%priority.index, ?provider).entered();
 
-                match categorize_client_response(method, resp) {
+                let chain = self.inner.providers.get(0).map(|v| v.chain_name()).unwrap();
+
+                match categorize_client_response(chain, method, resp) {
                     IsOk(v) => return Ok(serde_json::from_value(v)?),
                     RetryableErr(e) | RateLimitErr(e) => errors.push(e.into()),
                     NonRetryableErr(e) => return Err(e.into()),
