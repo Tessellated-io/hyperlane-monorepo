@@ -2,7 +2,9 @@ use eyre::Result;
 pub use span_metrics::TimeSpanLifetime;
 use tracing_subscriber::{
     filter::{LevelFilter, Targets},
+    fmt as tracing_fmt,
     prelude::*,
+    EnvFilter,
 };
 
 use self::fmt::LogOutputLayer;
@@ -89,7 +91,9 @@ impl TracingConfig {
         let err_layer = tracing_error::ErrorLayer::default();
 
         let (tokio_layer, tokio_server) = console_subscriber::ConsoleLayer::new();
+
         let subscriber = tracing_subscriber::Registry::default()
+            .with(EnvFilter::from_default_env()) // Allows filtering levels via `RUST_LOG`
             .with(tokio_layer)
             .with(target_layer)
             .with(TimeSpanLifetime::new(metrics))

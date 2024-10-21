@@ -239,6 +239,7 @@ impl ValidatorSubmitter {
             info!(
                 index = checkpoint.index,
                 queue_len = checkpoint_queue.len(),
+                chain = self.merkle_tree_hook.domain().id(),
                 "Reached tree consistency"
             );
             self.sign_and_submit_checkpoints(checkpoint_queue).await;
