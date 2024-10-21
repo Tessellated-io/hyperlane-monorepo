@@ -438,6 +438,7 @@ impl SingleValidator {
                             tokens_needed=%balance_delta,
                             eth_validator_address=?announcement.validator,
                             ?chain_signer,
+                            chain=self.origin_chain.name(),
                             "Please send tokens to your chain signer address to announce",
                         );
                     } else {
