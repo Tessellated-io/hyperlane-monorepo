@@ -424,6 +424,7 @@ impl SingleValidator {
                 }
                 info!(
                     announced_locations=?locations,
+                    chain=self.origin_chain.name(),
                     "Validator has not announced signature storage location"
                 );
 
@@ -432,7 +433,7 @@ impl SingleValidator {
                     .await?
                 {
                     let chain_signer = chain_signer.address_string();
-                    info!(eth_validator_address=?announcement.validator, ?chain_signer, "Attempting self announce");
+                    info!(eth_validator_address=?announcement.validator, ?chain_signer, chain=self.origin_chain.name(), "Attempting self announce");
                     let balance_delta = self
                         .validator_announce
                         .announce_tokens_needed(signed_announcement.clone())
