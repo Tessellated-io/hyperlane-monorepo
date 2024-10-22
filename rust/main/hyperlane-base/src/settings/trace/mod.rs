@@ -100,7 +100,7 @@ impl TracingConfig {
             }
 
             // Allow logging of filtered spans if they are WARN or higher
-            return metadata.level() >= &LevelFilter::WARN;
+            return metadata.level() <= &LevelFilter::WARN;
         });
 
         let log_format = tracing_fmt::format::Format::default()
