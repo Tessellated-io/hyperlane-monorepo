@@ -2,10 +2,7 @@
 #![allow(clippy::doc_lazy_continuation)] // TODO: `rustc` 1.80.1 clippy issue
 
 use async_trait::async_trait;
-use rusoto_core::credential::{
-    AwsCredentials, CredentialsError, EnvironmentProvider, ProvideAwsCredentials,
-};
-use std::collections::BTreeMap;
+use rusoto_core::credential::{AwsCredentials, CredentialsError, ProvideAwsCredentials};
 
 /// Provides AWS credentials from multiple possible sources using a priority order.
 /// The following sources are checked in order for credentials when calling credentials. More sources may be supported in future if a need be.

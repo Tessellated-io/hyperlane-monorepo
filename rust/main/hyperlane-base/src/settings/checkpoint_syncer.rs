@@ -26,7 +26,9 @@ pub enum CheckpointSyncerConf {
         folder: Option<String>,
         /// S3 Region
         region: Region,
+        /// Access Key ID for the S3 bucket
         aws_access_key_id: String,
+        /// Secret Key for the S3 bucket
         aws_access_key_secret: String,
     },
     /// A checkpoint syncer on Google Cloud Storage

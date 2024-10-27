@@ -16,8 +16,6 @@ use ethers_prometheus::json_rpc_client::{JsonRpcBlockGetter, PrometheusJsonRpcCl
 
 use crate::rpc_clients::{categorize_client_response, CategorizedResponse};
 
-use super::provider;
-
 /// Wrapper of `FallbackProvider` for use in `hyperlane-ethereum`
 #[derive(new)]
 pub struct EthereumFallbackProvider<C, B>(FallbackProvider<C, B>);

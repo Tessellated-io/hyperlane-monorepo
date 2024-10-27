@@ -15,9 +15,7 @@ use hyperlane_base::{
         CheckpointSyncerConf, Settings, SignerConf,
     },
 };
-use hyperlane_core::{
-    cfg_unwrap_all, config::*, HyperlaneDomain, HyperlaneDomainProtocol, ReorgPeriod,
-};
+use hyperlane_core::{cfg_unwrap_all, config::*, HyperlaneDomain, ReorgPeriod};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -163,7 +161,7 @@ fn parse_validator(
         .parse_value("Invalid reorgPeriod")
         .unwrap_or(ReorgPeriod::from_blocks(1));
 
-    cfg_unwrap_all!(cwp, err: [base, origin_chain, validator, checkpoint_syncer]);
+    cfg_unwrap_all!(cwp, err: [origin_chain, validator, checkpoint_syncer]);
 
     let validator_settings: SingleValidatorSettings = SingleValidatorSettings {
         db: db.clone(),
