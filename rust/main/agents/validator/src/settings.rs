@@ -44,8 +44,8 @@ pub struct SingleValidatorSettings {
     pub validator: SignerConf,
     /// The checkpoint syncer configuration
     pub checkpoint_syncer: CheckpointSyncerConf,
-    /// The reorg_period in blocks
-    pub reorg_period: u64,
+    /// The reorg configuration
+    pub reorg_period: ReorgPeriod,
     /// How frequently to check for new checkpoints
     pub interval: Duration,
 }
@@ -87,9 +87,9 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
         // Parse validator configs
         let mut validators: Vec<SingleValidatorSettings> = vec![];
         for parser in validator_parsers {
-            let validator: SingleValidatorSettings =
+            let validator: Result<SingleValidatorSettings, ConfigParsingError> =
                 parse_validator(parser.clone(), Some(&unwrapped_base), cwp);
-            validators.push(validator);
+            validators.push(validator.unwrap())
         }
 
         err.into_result(Self {
@@ -103,7 +103,7 @@ fn parse_validator(
     p: ValueParser,
     base: Option<&Settings>,
     cwp: &ConfigPath,
-) -> SingleValidatorSettings {
+) -> Result<SingleValidatorSettings, ConfigParsingError> {
     let mut err = ConfigParsingError::default();
 
     let origin_chain_name = p
@@ -171,10 +171,10 @@ fn parse_validator(
         interval,
         origin_chain: origin_chain.clone(),
         validator: validator.clone(),
-        reorg_period,
+        reorg_period: reorg_period.clone(),
     };
 
-    return validator_settings;
+    return Ok(validator_settings);
 }
 
 /// Expects ValidatorAgentConfig.checkpointSyncer
