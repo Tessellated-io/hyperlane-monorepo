@@ -35,6 +35,7 @@ export {
   normalizeAddressCosmos,
   normalizeAddressEvm,
   normalizeAddressSealevel,
+  padBytesToLength,
   shortenAddress,
   strip0x,
 } from './addresses.js';
@@ -119,6 +120,8 @@ export {
   pick,
   promiseObjAll,
   stringifyObject,
+  diffObjMerge,
+  ObjectDiff,
 } from './objects.js';
 export { Result, failure, success } from './result.js';
 export { difference, setEquality, symmetricDifference } from './sets.js';
