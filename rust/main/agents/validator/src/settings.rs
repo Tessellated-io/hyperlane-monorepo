@@ -15,7 +15,9 @@ use hyperlane_base::{
         CheckpointSyncerConf, Settings, SignerConf,
     },
 };
-use hyperlane_core::{cfg_unwrap_all, config::*, HyperlaneDomain};
+use hyperlane_core::{
+    cfg_unwrap_all, config::*, HyperlaneDomain, HyperlaneDomainProtocol, ReorgPeriod,
+};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -64,6 +66,8 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
         let p = ValueParser::new(cwp.clone(), &raw.0);
 
         // Parse the base config
+        // NOTE: Hyperlane mainline filteres to a specific origin chain for this load, but since this repo
+        // supports multiple origin chains, we pass None as the filter.
         let base: Option<Settings> = p
             .parse_from_raw_config::<Settings, RawAgentConf, Option<&HashSet<&str>>>(
                 None,
@@ -102,34 +106,11 @@ fn parse_validator(
 ) -> SingleValidatorSettings {
     let mut err = ConfigParsingError::default();
 
-    let checkpoint_syncer = p
-        .chain(&mut err)
-        .get_key("checkpointSyncer")
-        .and_then(parse_checkpoint_syncer)
-        .end();
-
     let origin_chain_name = p
         .chain(&mut err)
         .get_key("originChainName")
         .parse_string()
         .end();
-
-    let db = p
-        .chain(&mut err)
-        .get_opt_key("db")
-        .parse_from_str("Expected db file path")
-        .unwrap_or_else(|| {
-            std::env::current_dir()
-                .unwrap()
-                .join(format!("validator_db_{}", origin_chain_name.unwrap_or("")))
-        });
-
-    let interval = p
-        .chain(&mut err)
-        .get_opt_key("interval")
-        .parse_u64()
-        .map(Duration::from_secs)
-        .unwrap_or(Duration::from_secs(5));
 
     let origin_chain = if let (Some(base), Some(origin_chain_name)) = (&base, origin_chain_name) {
         base.lookup_domain(origin_chain_name)
@@ -147,21 +128,49 @@ fn parse_validator(
             "Expected valid validator configuration",
         )
         .end();
+
+    let db = p
+        .chain(&mut err)
+        .get_opt_key("db")
+        .parse_from_str("Expected db file path")
+        .unwrap_or_else(|| {
+            std::env::current_dir()
+                .unwrap()
+                .join(format!("validator_db_{}", origin_chain_name.unwrap_or("")))
+        });
+
+    let checkpoint_syncer = p
+        .chain(&mut err)
+        .get_key("checkpointSyncer")
+        .and_then(parse_checkpoint_syncer)
+        .end();
+
+    let interval = p
+        .chain(&mut err)
+        .get_opt_key("interval")
+        .parse_u64()
+        .map(Duration::from_secs)
+        .unwrap_or(Duration::from_secs(5));
+
+    cfg_unwrap_all!(cwp, err: [origin_chain_name]);
+
     let reorg_period = p
         .chain(&mut err)
         .get_key("chains")
-        .get_key(origin_chain_name.unwrap())
+        .get_key(origin_chain_name)
         .get_opt_key("blocks")
         .get_opt_key("reorgPeriod")
-        .parse_u64()
-        .unwrap_or(1);
+        .parse_value("Invalid reorgPeriod")
+        .unwrap_or(ReorgPeriod::from_blocks(1));
+
+    cfg_unwrap_all!(cwp, err: [base, origin_chain, validator, checkpoint_syncer]);
 
     let validator_settings: SingleValidatorSettings = SingleValidatorSettings {
         db: db.clone(),
-        checkpoint_syncer: checkpoint_syncer.unwrap().clone(),
+        checkpoint_syncer: checkpoint_syncer.clone(),
         interval,
-        origin_chain: origin_chain.unwrap().clone(),
-        validator: validator.unwrap().clone(),
+        origin_chain: origin_chain.clone(),
+        validator: validator.clone(),
         reorg_period,
     };
 
