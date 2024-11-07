@@ -64,8 +64,8 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
         let p = ValueParser::new(cwp.clone(), &raw.0);
 
         // Parse the base config
-        // NOTE: Hyperlane mainline filteres to a specific origin chain for this load, but since this repo
-        // supports multiple origin chains, we pass None as the filter.
+        // NOTE: Hyperlane mainline filters to a specific origin chain on their mainline repo,
+        // but since this fork supports multiple origin chains, we pass None as the filter.
         let base: Option<Settings> = p
             .parse_from_raw_config::<Settings, RawAgentConf, Option<&HashSet<&str>>>(
                 None,
