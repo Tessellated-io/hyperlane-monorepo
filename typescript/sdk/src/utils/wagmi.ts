@@ -1,4 +1,4 @@
-import { Chain, defineChain } from 'viem';
+import type { Chain as WagmiChain } from '@wagmi/chains';
 
 import { test1 } from '../consts/testChains.js';
 import {
@@ -6,8 +6,8 @@ import {
   getChainIdNumber,
 } from '../metadata/chainMetadataTypes.js';
 
-export function chainMetadataToViemChain(metadata: ChainMetadata): Chain {
-  return defineChain({
+export function chainMetadataToWagmiChain(metadata: ChainMetadata): WagmiChain {
+  return {
     id: getChainIdNumber(metadata),
     name: metadata.displayName || metadata.name,
     network: metadata.name,
@@ -25,5 +25,5 @@ export function chainMetadataToViemChain(metadata: ChainMetadata): Chain {
         }
       : undefined,
     testnet: !!metadata.isTestnet,
-  });
+  };
 }
