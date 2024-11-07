@@ -181,11 +181,11 @@ impl JsonRpcClient for RetryingProvider<PrometheusJsonRpcClient<Http>> {
             let _span = warn_span!(
                 "request_with_retry",
                 next_backoff_ms,
-                retries_remaining = self.max_requests - attempt
+                retries_remaining = self.max_requests - attempt,
             )
             .entered();
 
-            match categorize_client_response(method, res) {
+            match categorize_client_response(self.inner.chain_name(), method, res) {
                 IsOk(res) => Accept(res),
                 RetryableErr(e) => Retry(e),
                 RateLimitErr(e) => RateLimitedRetry(e),

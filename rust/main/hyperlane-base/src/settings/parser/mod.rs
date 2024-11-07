@@ -57,20 +57,6 @@ impl FromRawConf<RawAgentConf, Option<&HashSet<&str>>> for Settings {
             .parse_u16()
             .unwrap_or(9090);
 
-        let fmt = p
-            .chain(&mut err)
-            .get_opt_key("log")
-            .get_opt_key("format")
-            .parse_value("Invalid log format")
-            .unwrap_or_default();
-
-        let level = p
-            .chain(&mut err)
-            .get_opt_key("log")
-            .get_opt_key("level")
-            .parse_value("Invalid log level")
-            .unwrap_or_default();
-
         let raw_chains: Vec<(String, ValueParser)> = if let Some(filter) = filter {
             p.chain(&mut err)
                 .get_opt_key("chains")
@@ -111,10 +97,11 @@ impl FromRawConf<RawAgentConf, Option<&HashSet<&str>>> for Settings {
             })
             .collect();
 
+
         err.into_result(Self {
             chains,
             metrics_port,
-            tracing: TracingConfig { fmt, level },
+            tracing: TracingConfig { },
         })
     }
 }
@@ -217,6 +204,9 @@ fn parse_chain(
         },
     );
 
+    let cloned = domain.clone();
+    let chain_name = cloned.as_ref();
+
     cfg_unwrap_all!(&chain.cwp, err: [connection, mailbox, interchain_gas_paymaster, validator_announce, merkle_tree_hook]);
     err.into_result(ChainConf {
         domain,
@@ -231,6 +221,7 @@ fn parse_chain(
         connection,
         metrics_conf: Default::default(),
         index: IndexSettings {
+            chain_name: chain_name.to_string(),
             from,
             chunk_size,
             mode,

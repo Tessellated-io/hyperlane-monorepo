@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use derive_more::AsRef;
 use eyre::Result;
 
+use futures::future::join_all;
 use futures_util::future::try_join_all;
 use tokio::{task::JoinHandle, time::sleep};
 use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
@@ -29,9 +30,69 @@ use crate::{
     submit::{ValidatorSubmitter, ValidatorSubmitterMetrics},
 };
 
-/// A validator agent
 #[derive(Debug, AsRef)]
 pub struct Validator {
+    validators: Vec<SingleValidator>,
+}
+
+#[async_trait]
+impl BaseAgent for Validator {
+    const AGENT_NAME: &'static str = "validator";
+
+    type Settings = ValidatorSettings;
+
+    async fn from_settings(
+        agent_metadata: AgentMetadata,
+        settings: Self::Settings,
+        metrics: Arc<CoreMetrics>,
+        agent_metrics: AgentMetrics,
+        chain_metrics: ChainMetrics,
+        _tokio_console_server: console_subscriber::Server,
+    ) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let contract_sync_metrics = Arc::new(ContractSyncMetrics::new(&metrics));
+
+        let mut validators: Vec<SingleValidator> = vec![];
+        let num_vals = settings.validators.len();
+        for val_idx in 0..num_vals {
+            let wrapped = SingleValidator::make_validator(
+                agent_metadata.clone(),
+                &settings,
+                metrics.clone(),
+                agent_metrics.clone(),
+                chain_metrics.clone(),
+                &_tokio_console_server,
+                val_idx,
+                &contract_sync_metrics,
+            )
+            .await?;
+
+            validators.push(wrapped);
+        }
+
+        Ok(Self {
+            validators: validators,
+        })
+    }
+
+    #[allow(clippy::async_yields_async)]
+    async fn run(mut self) {
+        // Create a collection of futures by calling `run` on each Foo
+        let futures = self
+            .validators
+            .iter_mut()
+            .map(|validator: &mut SingleValidator| validator.run());
+
+        // Wait for all Foo instances to complete their `run` methods
+        join_all(futures).await;
+    }
+}
+
+/// A validator agent
+#[derive(Debug, AsRef)]
+pub struct SingleValidator {
     origin_chain: HyperlaneDomain,
     origin_chain_conf: ChainConf,
     #[as_ref]
@@ -53,59 +114,59 @@ pub struct Validator {
     agent_metadata: AgentMetadata,
 }
 
-#[async_trait]
-impl BaseAgent for Validator {
-    const AGENT_NAME: &'static str = "validator";
+impl SingleValidator {
+    const AGENT_NAME: &'static str = "single_validator";
 
-    type Settings = ValidatorSettings;
-
-    async fn from_settings(
+    async fn make_validator(
         agent_metadata: AgentMetadata,
-        settings: Self::Settings,
+        settings: &ValidatorSettings,
         metrics: Arc<CoreMetrics>,
         agent_metrics: AgentMetrics,
         chain_metrics: ChainMetrics,
-        _tokio_console_server: console_subscriber::Server,
+        _tokio_console_server: &console_subscriber::Server,
+        index: usize,
+        contract_sync_metrics: &Arc<ContractSyncMetrics>,
     ) -> Result<Self>
     where
         Self: Sized,
     {
-        let db = DB::from_path(&settings.db)?;
-        let msg_db = HyperlaneRocksDB::new(&settings.origin_chain, db);
+        let validator_settings = &settings.validators[index];
+
+        let db = DB::from_path(&validator_settings.db)?;
+        let msg_db = HyperlaneRocksDB::new(&validator_settings.origin_chain, db);
 
         // Intentionally using hyperlane_ethereum for the validator's signer
-        let (signer_instance, signer) = SingletonSigner::new(settings.validator.build().await?);
+        let (signer_instance, signer) =
+            SingletonSigner::new(validator_settings.validator.build().await?);
 
         let core = settings.build_hyperlane_core(metrics.clone());
-        let checkpoint_syncer = settings
+        let checkpoint_syncer = validator_settings
             .checkpoint_syncer
             .build_and_validate(None)
             .await?
             .into();
 
         let mailbox = settings
-            .build_mailbox(&settings.origin_chain, &metrics)
+            .build_mailbox(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let merkle_tree_hook = settings
-            .build_merkle_tree_hook(&settings.origin_chain, &metrics)
+            .build_merkle_tree_hook(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let validator_announce = settings
-            .build_validator_announce(&settings.origin_chain, &metrics)
+            .build_validator_announce(&validator_settings.origin_chain, &metrics)
             .await?;
 
         let origin_chain_conf = core
             .settings
-            .chain_setup(&settings.origin_chain)
+            .chain_setup(&validator_settings.origin_chain)
             .unwrap()
             .clone();
 
-        let contract_sync_metrics = Arc::new(ContractSyncMetrics::new(&metrics));
-
         let merkle_tree_hook_sync = settings
             .sequenced_contract_sync::<MerkleTreeInsertion, _>(
-                &settings.origin_chain,
+                &validator_settings.origin_chain,
                 &metrics,
                 &contract_sync_metrics,
                 msg_db.clone().into(),
@@ -113,7 +174,7 @@ impl BaseAgent for Validator {
             .await?;
 
         Ok(Self {
-            origin_chain: settings.origin_chain,
+            origin_chain: validator_settings.origin_chain.clone(),
             origin_chain_conf,
             core,
             db: msg_db,
@@ -123,19 +184,19 @@ impl BaseAgent for Validator {
             validator_announce: validator_announce.into(),
             signer,
             signer_instance: Some(Box::new(signer_instance)),
-            reorg_period: settings.reorg_period,
-            interval: settings.interval,
+            reorg_period: validator_settings.reorg_period.clone(),
+            interval: validator_settings.interval,
             checkpoint_syncer,
             agent_metrics,
             chain_metrics,
             core_metrics: metrics,
-            agent_metadata,
+            agent_metadata: agent_metadata,
         })
     }
 
     #[allow(clippy::async_yields_async)]
-    async fn run(mut self) {
-        let mut tasks = vec![];
+    async fn run(&mut self) {
+        let mut tasks: Vec<Instrumented<JoinHandle<()>>> = vec![];
 
         // run server
         let custom_routes =
@@ -211,9 +272,7 @@ impl BaseAgent for Validator {
             error!(?err, "One of the validator tasks returned an error");
         }
     }
-}
 
-impl Validator {
     async fn run_merkle_tree_hook_sync(&self) -> Instrumented<JoinHandle<()>> {
         let index_settings =
             self.as_ref().settings.chains[self.origin_chain.name()].index_settings();
@@ -278,7 +337,11 @@ impl Validator {
         tasks
     }
 
-    fn log_on_announce_failure(result: ChainResult<TxOutcome>, chain_signer: &String) {
+    fn log_on_announce_failure(
+        result: ChainResult<TxOutcome>,
+        chain_signer: &String,
+        origin_chain: &HyperlaneDomain,
+    ) {
         match result {
             Ok(outcome) => {
                 if outcome.executed {
@@ -301,6 +364,7 @@ impl Validator {
                 error!(
                     ?err,
                     ?chain_signer,
+                    chain=origin_chain.name(),
                     "Failed to announce validator. Make sure you have enough funds in your account to pay for gas."
                 );
             }
@@ -337,7 +401,10 @@ impl Validator {
         // their locations, which makes them functionally unusable.
         let validators: [H256; 1] = [address.into()];
         loop {
-            info!("Checking for validator announcement");
+            info!(
+                validator = self.origin_chain.as_ref(),
+                "Checking for validator announcement"
+            );
             if let Some(locations) = self
                 .validator_announce
                 .get_announced_storage_locations(&validators)
@@ -354,6 +421,7 @@ impl Validator {
                 }
                 info!(
                     announced_locations=?locations,
+                    chain=self.origin_chain.name(),
                     "Validator has not announced signature storage location"
                 );
 
@@ -362,7 +430,7 @@ impl Validator {
                     .await?
                 {
                     let chain_signer = chain_signer.address_string();
-                    info!(eth_validator_address=?announcement.validator, ?chain_signer, "Attempting self announce");
+                    info!(eth_validator_address=?announcement.validator, ?chain_signer, chain=self.origin_chain.name(), "Attempting self announce");
                     let balance_delta = self
                         .validator_announce
                         .announce_tokens_needed(signed_announcement.clone())
@@ -373,6 +441,7 @@ impl Validator {
                             tokens_needed=%balance_delta,
                             eth_validator_address=?announcement.validator,
                             ?chain_signer,
+                            chain=self.origin_chain.name(),
                             "Please send tokens to your chain signer address to announce",
                         );
                     } else {
@@ -380,7 +449,7 @@ impl Validator {
                             .validator_announce
                             .announce(signed_announcement.clone())
                             .await;
-                        Self::log_on_announce_failure(result, &chain_signer);
+                        Self::log_on_announce_failure(result, &chain_signer, &self.origin_chain);
                     }
                 } else {
                     warn!(origin_chain=%self.origin_chain, "Cannot announce validator without a signer; make sure a signer is set for the origin chain");

@@ -18,6 +18,8 @@ const MAX_BACKWARD_SYNC_BLOCKING_TIME: Duration = Duration::from_secs(5);
 
 /// A sequence-aware cursor that syncs backward until there are no earlier logs to index.
 pub(crate) struct BackwardSequenceAwareSyncCursor<T> {
+    chain_name: String,
+
     /// The max chunk size to query for logs.
     /// If in sequence mode, this is the max number of sequences to query.
     /// If in block mode, this is the max number of blocks to query.
@@ -42,6 +44,7 @@ impl<T> Debug for BackwardSequenceAwareSyncCursor<T> {
             .field("last_indexed_snapshot", &self.last_indexed_snapshot)
             .field("current_indexing_snapshot", &self.current_indexing_snapshot)
             .field("index_mode", &self.index_mode)
+            .field("chain", &self.chain_name)
             .finish()
     }
 }
@@ -53,6 +56,7 @@ impl<T: Debug> BackwardSequenceAwareSyncCursor<T> {
         ret
     )]
     pub fn new(
+        chain_name: &str,
         chunk_size: u32,
         db: Arc<dyn HyperlaneSequenceAwareIndexerStoreReader<T>>,
         current_sequence_count: u32,
@@ -68,6 +72,7 @@ impl<T: Debug> BackwardSequenceAwareSyncCursor<T> {
         };
 
         Self {
+            chain_name: chain_name.to_string(),
             chunk_size,
             db,
             current_indexing_snapshot: last_indexed_snapshot.previous_target(),
@@ -316,6 +321,7 @@ impl<T: Debug> BackwardSequenceAwareSyncCursor<T> {
             ?logs,
             current_indexing_snapshot=?self.current_indexing_snapshot,
             last_indexed_snapshot=?self.last_indexed_snapshot,
+            chain=self.chain_name,
             "Log sequences don't exactly match the expected sequence range, rewinding to last indexed snapshot",
         );
         // Rewind to the last snapshot.

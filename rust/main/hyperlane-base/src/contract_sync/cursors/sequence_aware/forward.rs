@@ -19,6 +19,8 @@ use super::{LastIndexedSnapshot, TargetSnapshot};
 
 /// A sequence-aware cursor that syncs forwards in perpetuity.
 pub(crate) struct ForwardSequenceAwareSyncCursor<T> {
+    chain_name: String,
+
     /// The max chunk size to query for logs.
     /// If in sequence mode, this is the max number of sequences to query.
     /// If in block mode, this is the max number of blocks to query.
@@ -49,6 +51,7 @@ impl<T> Debug for ForwardSequenceAwareSyncCursor<T> {
             .field("current_indexing_snapshot", &self.current_indexing_snapshot)
             .field("target_snapshot", &self.target_snapshot)
             .field("index_mode", &self.index_mode)
+            .field("chain", &self.chain_name)
             .finish()
     }
 }
@@ -60,6 +63,7 @@ impl<T: Debug> ForwardSequenceAwareSyncCursor<T> {
         ret
     )]
     pub fn new(
+        chain_name: &str,
         chunk_size: u32,
         latest_sequence_querier: Arc<dyn SequenceAwareIndexer<T>>,
         db: Arc<dyn HyperlaneSequenceAwareIndexerStoreReader<T>>,
@@ -75,6 +79,7 @@ impl<T: Debug> ForwardSequenceAwareSyncCursor<T> {
         };
 
         Self {
+            chain_name: chain_name.to_string(),
             chunk_size,
             latest_sequence_querier,
             db,
@@ -391,6 +396,7 @@ impl<T: Debug> ForwardSequenceAwareSyncCursor<T> {
             current_indexing_snapshot=?self.current_indexing_snapshot,
             last_indexed_snapshot=?self.last_indexed_snapshot,
             target_snapshot=?self.target_snapshot,
+            chain=self.chain_name,
             "Log sequences don't exactly match the expected sequence range, rewinding to last indexed snapshot",
         );
         // If there are any missing sequences, rewind to index immediately after the last snapshot.

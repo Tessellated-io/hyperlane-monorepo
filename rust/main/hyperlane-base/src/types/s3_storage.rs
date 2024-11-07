@@ -26,6 +26,8 @@ const S3_REQUEST_TIMEOUT_SECONDS: u64 = 30;
 #[derive(Clone, new)]
 /// Type for reading/writing to S3
 pub struct S3Storage {
+    key: String,
+    secret: String,
     /// The name of the bucket.
     bucket: String,
     /// A specific folder inside the above repo - set to empty string to use the root of the bucket
@@ -97,7 +99,7 @@ impl S3Storage {
         self.authenticated_client.get_or_init(|| {
             S3Client::new_with(
                 utils::http_client_with_timeout().unwrap(),
-                AwsChainCredentialsProvider::new(),
+                AwsChainCredentialsProvider::new(self.key.as_str(), &self.secret.as_str()),
                 self.region.clone(),
             )
         })

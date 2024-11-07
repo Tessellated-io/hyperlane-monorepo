@@ -26,6 +26,10 @@ pub enum CheckpointSyncerConf {
         folder: Option<String>,
         /// S3 Region
         region: Region,
+        /// Access Key ID for the S3 bucket
+        aws_access_key_id: String,
+        /// Secret Key for the S3 bucket
+        aws_access_key_secret: String,
     },
     /// A checkpoint syncer on Google Cloud Storage
     Gcs {
@@ -53,12 +57,14 @@ impl FromStr for CheckpointSyncerConf {
         match prefix {
             "s3" => {
                 let url_components = suffix.split('/').collect::<Vec<&str>>();
-                let (bucket, region, folder): (&str, &str, Option<String>) = match url_components.len() {
-                    2 => Ok((url_components[0], url_components[1], None)),
-                    3 .. => Ok((url_components[0], url_components[1], Some(url_components[2..].join("/")))),
+                let (bucket, region, aws_access_key_id, aws_access_key_secret,folder): (&str, &str, &str, &str, Option<String>) = match url_components.len() {
+                    4 => Ok((url_components[0], url_components[1], url_components[2], url_components[3], None)),
+                    5 .. => Ok((url_components[0], url_components[1], url_components[2], url_components[3], Some(url_components[4..].join("/")))),
                     _ => Err(eyre!("Error parsing storage location; could not split bucket, region and folder ({suffix})"))
                 }?;
                 Ok(CheckpointSyncerConf::S3 {
+                    aws_access_key_id: aws_access_key_id.to_string(),
+                    aws_access_key_secret: aws_access_key_secret.to_string(),
                     bucket: bucket.into(),
                     folder,
                     region: region
@@ -144,7 +150,11 @@ impl CheckpointSyncerConf {
                 bucket,
                 folder,
                 region,
+                aws_access_key_id,
+                aws_access_key_secret,
             } => Box::new(S3Storage::new(
+                aws_access_key_id.clone(),
+                aws_access_key_secret.clone(),
                 bucket.clone(),
                 folder.clone(),
                 region.clone(),

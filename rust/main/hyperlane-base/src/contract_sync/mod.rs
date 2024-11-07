@@ -182,6 +182,7 @@ where
                     estimated_time_to_sync = fmt_sync_time(eta),
                     sequences = ?logs.iter().map(|(log, meta)| IndexedTxIdAndSequence::new(meta.transaction_id, log.sequence)).collect::<Vec<_>>(),
                     cursor = ?cursor,
+                    chain = self.domain.as_ref(),
                     "Found log(s) in index range"
                 );
 
@@ -300,6 +301,7 @@ where
     ) -> Result<Box<dyn ContractSyncCursor<T>>> {
         let watermark = self.db.retrieve_high_watermark().await.unwrap();
         let index_settings = IndexSettings {
+            chain_name: index_settings.chain_name,
             from: watermark.unwrap_or(index_settings.from),
             chunk_size: index_settings.chunk_size,
             mode: index_settings.mode,
@@ -347,6 +349,7 @@ where
     ) -> Result<Box<dyn ContractSyncCursor<T>>> {
         Ok(Box::new(
             ForwardBackwardSequenceAwareSyncCursor::new(
+                index_settings.chain_name.as_str(),
                 self.indexer.clone(),
                 Arc::new(self.db.clone()),
                 index_settings.chunk_size,
