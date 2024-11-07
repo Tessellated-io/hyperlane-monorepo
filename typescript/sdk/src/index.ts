@@ -96,6 +96,7 @@ export { HyperlaneProxyFactoryDeployer } from './deploy/HyperlaneProxyFactoryDep
 export {
   CheckerViolation,
   OwnableConfig,
+  DeployedOwnableConfig,
   OwnerViolation,
   ProxyAdminViolation,
   ViolationType,
@@ -394,6 +395,7 @@ export {
   ProxiedFactories,
   ProxiedRouterConfig,
   RemoteRouters,
+  DestinationGas,
   RouterAddress,
   RouterConfig,
   RouterViolation,
@@ -446,6 +448,7 @@ export { HypERC20Checker } from './token/checker.js';
 export { TokenType } from './token/config.js';
 export {
   HypERC20Factories,
+  hypERC20contracts,
   HypERC721Factories,
   TokenFactories,
   hypERC20factories,
@@ -495,6 +498,7 @@ export {
   SealevelInstructionWrapper,
   getSealevelAccountDataSchema,
 } from './utils/sealevelSerialization.js';
+export { getChainIdFromTxs } from './utils/transactions.js';
 export { chainMetadataToWagmiChain } from './utils/wagmi.js';
 export {
   FeeConstantConfig,
@@ -506,11 +510,16 @@ export {
 } from './warp/types.js';
 export { WarpCore, WarpCoreOptions } from './warp/WarpCore.js';
 
-export { AggregationIsmConfigSchema, IsmConfigSchema } from './ism/schemas.js';
+export {
+  AggregationIsmConfigSchema,
+  IsmConfigSchema,
+  MultisigIsmConfigSchema,
+} from './ism/schemas.js';
 export { MailboxClientConfigSchema as mailboxClientConfigSchema } from './router/schemas.js';
 export {
   CollateralConfig,
   NativeConfig,
+  TokenConfig,
   TokenRouterConfigSchema,
   WarpRouteDeployConfigSchema,
   WarpRouteDeployConfigSchemaErrors,
@@ -531,7 +540,12 @@ export {
 } from './utils/gnosisSafe.js';
 
 export { EvmCoreModule } from './core/EvmCoreModule.js';
-export { proxyAdmin } from './deploy/proxy.js';
+export {
+  proxyAdmin,
+  isProxy,
+  proxyConstructorArgs,
+  proxyImplementation,
+} from './deploy/proxy.js';
 export {
   ProxyFactoryFactoriesAddresses,
   ProxyFactoryFactoriesSchema,
@@ -539,3 +553,13 @@ export {
 export { EvmIsmModule } from './ism/EvmIsmModule.js';
 export { AnnotatedEV5Transaction } from './providers/ProviderType.js';
 export { EvmERC20WarpModule } from './token/EvmERC20WarpModule.js';
+export {
+  GasPriceConfig,
+  NativeTokenPriceConfig,
+  ChainGasOracleParams,
+  getCoingeckoTokenPrices,
+  getCosmosChainGasPrice,
+  getGasPrice,
+  getLocalStorageGasOracleConfig,
+  getTokenExchangeRateFromValues,
+} from './gas/utils.js';

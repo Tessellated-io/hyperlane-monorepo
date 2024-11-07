@@ -192,7 +192,9 @@ export function objOmit<T extends Record<string, any> = any>(
 
 export function invertKeysAndValues(data: any) {
   return Object.fromEntries(
-    Object.entries(data).map(([key, value]) => [value, key]),
+    Object.entries(data)
+      .filter(([_, value]) => value !== undefined && value !== null) // Filter out undefined and null values
+      .map(([key, value]) => [value, key]),
   );
 }
 
@@ -316,4 +318,12 @@ export function diffObjMerge(
     mergedObject: { expected: expected ?? '', actual: actual ?? '' },
     isInvalid: true,
   };
+}
+
+export function mustGet<T>(obj: Record<string, T>, key: string): T {
+  const value = obj[key];
+  if (!value) {
+    throw new Error(`Missing key ${key} in object ${JSON.stringify(obj)}`);
+  }
+  return value;
 }
