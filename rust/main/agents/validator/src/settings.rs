@@ -72,7 +72,7 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
                 "Expected valid base agent configuration",
             )
             .take_config_err(&mut err);
-        let unwrapped_base = base.unwrap();
+        cfg_unwrap_all!(cwp, err: [base]);
 
         // Collect value parsers for each single validator config
         let validator_parsers: Vec<ValueParser> = p
@@ -86,12 +86,12 @@ impl FromRawConf<RawValidatorSettings> for ValidatorSettings {
         let mut validators: Vec<SingleValidatorSettings> = vec![];
         for parser in validator_parsers {
             let validator: Result<SingleValidatorSettings, ConfigParsingError> =
-                parse_validator(parser.clone(), Some(&unwrapped_base), cwp);
+                parse_validator(parser.clone(), Some(&base), cwp);
             validators.push(validator.unwrap())
         }
 
         err.into_result(Self {
-            base: unwrapped_base,
+            base: base,
             validators,
         })
     }
