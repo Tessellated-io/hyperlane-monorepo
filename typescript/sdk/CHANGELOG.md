@@ -1,5 +1,16 @@
 # @hyperlane-xyz/sdk
 
+## 7.2.0
+
+### Minor Changes
+
+- 81ab4332f: Remove ismFactoryAddresses from warpConfig
+
+### Patch Changes
+
+- @hyperlane-xyz/utils@7.2.0
+- @hyperlane-xyz/core@5.8.2
+
 ## 7.1.0
 
 ### Minor Changes
