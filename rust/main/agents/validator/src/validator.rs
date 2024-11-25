@@ -170,6 +170,7 @@ impl SingleValidator {
                 &metrics,
                 &contract_sync_metrics,
                 msg_db.clone().into(),
+                false,
             )
             .await?;
 

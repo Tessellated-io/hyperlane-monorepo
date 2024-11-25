@@ -74,7 +74,7 @@ impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
     pub async fn new(
         chain_name: &str,
         latest_sequence_querier: Arc<dyn SequenceAwareIndexer<T>>,
-        db: Arc<dyn HyperlaneSequenceAwareIndexerStoreReader<T>>,
+        store: Arc<dyn HyperlaneSequenceAwareIndexerStoreReader<T>>,
         chunk_size: u32,
         mode: IndexMode,
     ) -> Result<Self> {
@@ -88,19 +88,13 @@ impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
             chain_name,
             chunk_size,
             latest_sequence_querier.clone(),
-            db.clone(),
+            store.clone(),
             sequence_count,
             tip,
             mode,
         );
-        let backward_cursor = BackwardSequenceAwareSyncCursor::new(
-            chain_name,
-            chunk_size,
-            db,
-            sequence_count,
-            tip,
-            mode,
-        );
+        let backward_cursor =
+        BackwardSequenceAwareSyncCursor::new(chunk_size, store, sequence_count, tip, mode);
         Ok(Self {
             forward: forward_cursor,
             backward: backward_cursor,

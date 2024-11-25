@@ -74,7 +74,8 @@ async function main() {
     await Promise.all(
       Object.entries(agentConfig.validators.chains)
         .filter(([validatorChain, _]) => {
-          if (chainsToSkip.includes(validatorChain)) {
+          // Ensure we skip lumia, as we don't have the addresses in registry.
+          if (validatorChain === 'lumia') {
             return false;
           }
 
