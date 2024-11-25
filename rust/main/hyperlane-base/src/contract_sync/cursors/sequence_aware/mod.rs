@@ -94,7 +94,7 @@ impl<T: Debug> ForwardBackwardSequenceAwareSyncCursor<T> {
             mode,
         );
         let backward_cursor =
-        BackwardSequenceAwareSyncCursor::new(chunk_size, store, sequence_count, tip, mode);
+        BackwardSequenceAwareSyncCursor::new(chain_name, chunk_size, store, sequence_count, tip, mode);
         Ok(Self {
             forward: forward_cursor,
             backward: backward_cursor,
