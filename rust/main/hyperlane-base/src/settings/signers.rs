@@ -125,6 +125,8 @@ fn get_or_init_yubihsm_signer(
     }
 }
 
+static mut X: Option<hyperlane_ethereum::Signers> = None;
+
 #[async_trait]
 impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
     async fn build(conf: &SignerConf) -> Result<Self, Report> {
@@ -152,17 +154,20 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                 authentication_key_id,
                 password,
                 signer_key_id,
-            } => {
-                let signer = get_or_init_yubihsm_signer(
-                    port,
-                    authentication_key_id,
-                    password,
-                    signer_key_id,
-                );
+            } => unsafe {
+                if X.is_none() {
+                    let signer = get_or_init_yubihsm_signer(
+                        port,
+                        authentication_key_id,
+                        password,
+                        signer_key_id,
+                    );
 
-                let x = hyperlane_ethereum::Signers::YubiHsm(Box::new(signer));
-                x
-            }
+                    X = Some(hyperlane_ethereum::Signers::YubiHsm(Box::new(signer)));
+                }
+
+                X.unwrap()
+            },
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
             }
