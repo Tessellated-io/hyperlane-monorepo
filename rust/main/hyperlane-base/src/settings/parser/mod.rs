@@ -97,11 +97,10 @@ impl FromRawConf<RawAgentConf, Option<&HashSet<&str>>> for Settings {
             })
             .collect();
 
-
         err.into_result(Self {
             chains,
             metrics_port,
-            tracing: TracingConfig { },
+            tracing: TracingConfig {},
         })
     }
 }
@@ -337,12 +336,44 @@ fn parse_signer(signer: ValueParser) -> ConfigResult<SignerConf> {
                 account_address_type,
             })
         }};
+        (yubihsm) => {{
+            let port = signer
+                .chain(&mut err)
+                .get_key("port")
+                .parse_u16()
+                .unwrap_or_default();
+            let authentication_key_id = signer
+                .chain(&mut err)
+                .get_key("authentication_key_id")
+                .parse_u16()
+                .unwrap_or_default();
+
+            let signer_key_id = signer
+                .chain(&mut err)
+                .get_key("signer_key_id")
+                .parse_u16()
+                .unwrap_or_default();
+
+            let password = signer
+                .chain(&mut err)
+                .get_key("password")
+                .parse_string()
+                .unwrap_or_default();
+
+            err.into_result(SignerConf::YubiHsm {
+                port,
+                authentication_key_id,
+                signer_key_id,
+                password: password.to_owned(),
+            })
+        }};
     }
 
     match signer_type {
         Some("hexKey") => parse_signer!(hexKey),
         Some("aws") => parse_signer!(aws),
         Some("cosmosKey") => parse_signer!(cosmosKey),
+        Some("yubihsm") => parse_signer!(yubihsm),
         Some(t) => {
             Err(eyre!("Unknown signer type `{t}`")).into_config_result(|| &signer.cwp + "type")
         }
