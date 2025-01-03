@@ -19,7 +19,7 @@ pub enum Signers {
     /// A signer using a key stored in aws kms
     Aws(AwsSigner),
     /// A signer using a yubihsm
-    YubiHsm(YubiWallet),
+    YubiHsm(Box<YubiWallet>),
 }
 
 impl Clone for Signers {
@@ -46,8 +46,8 @@ impl From<AwsSigner> for Signers {
     }
 }
 
-impl From<YubiWallet> for Signers {
-    fn from(s: YubiWallet) -> Self {
+impl From<Box<YubiWallet>> for Signers {
+    fn from(s: Box<YubiWallet>) -> Self {
         Signers::YubiHsm(s)
     }
 }
@@ -106,7 +106,10 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => signer.with_chain_id(chain_id).into(),
             Signers::Aws(signer) => signer.with_chain_id(chain_id).into(),
-            Signers::YubiHsm(signer) => signer.with_chain_id(chain_id).into(),
+            Signers::YubiHsm(signer) => {
+                // Dereference the Box and call with_chain_id on YubiWallet
+                Signers::YubiHsm(Box::new((*signer).with_chain_id(chain_id)))
+            }
         }
     }
 }

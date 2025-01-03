@@ -1,16 +1,27 @@
 use async_trait::async_trait;
 use ed25519_dalek::SecretKey;
 use ethers::prelude::{AwsSigner, LocalWallet, YubiWallet};
+use ethers::signers::yubihsm::ecdsa::Signer;
 use ethers::utils::hex::ToHex;
 use eyre::{bail, Context, Report};
 use hyperlane_core::{AccountAddressType, H256};
 use hyperlane_sealevel::Keypair;
+use lazy_static::lazy_static;
 use rusoto_core::Region;
 use rusoto_kms::KmsClient;
+use std::sync::Mutex;
+use std::sync::OnceLock;
 use tracing::instrument;
 
 use super::aws_credentials::AwsChainCredentialsProvider;
 use crate::types::utils;
+
+// Global var for yubishm connector.
+// Creating connectors for each validator causes the number of sessions the device can support to become exhausted.
+// static mut YUBIHSM_SIGNER: Box<YubiWallet> = Box::<YubiWallet>::new_uninit();
+lazy_static! {
+    static ref YUBIHSM_SIGNER: Mutex<Option<Box<YubiWallet>>> = Mutex::new(None);
+}
 
 /// Signer types
 #[derive(Default, Debug, Clone)]
@@ -74,6 +85,40 @@ pub trait BuildableWithSignerConf: Sized + ChainSigner {
     async fn build(conf: &SignerConf) -> Result<Self, Report>;
 }
 
+fn get_or_init_yubihsm_signer(
+    port: &u16,
+    authentication_key_id: &u16,
+    password: &String,
+    signer_key_id: &u16,
+) -> Box<YubiWallet> {
+    let mut signer = YUBIHSM_SIGNER.lock().unwrap();
+
+    if signer.is_none() {
+        let http_config = ethers::signers::yubihsm::HttpConfig {
+            addr: "127.0.0.1".to_owned(),
+            port: *port,
+            timeout_ms: 5000,
+        };
+        let connector = ethers::signers::yubihsm::Connector::http(&http_config);
+
+        let authentication_key =
+            ethers::signers::yubihsm::authentication::Key::derive_from_password(
+                password.as_bytes(),
+            );
+        let credentials =
+            ethers::signers::yubihsm::Credentials::new(*authentication_key_id, authentication_key);
+
+        // Create a new YubiWallet instance and wrap it in a Box
+        let signer_instance = YubiWallet::connect(connector, credentials.clone(), *signer_key_id);
+
+        // Move the Box<YubiWallet> into the static variable
+        *signer = Some(Box::new(signer_instance));
+    }
+
+    // Return the Box<YubiWallet> directly
+    signer.take().unwrap()
+}
+
 #[async_trait]
 impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
     async fn build(conf: &SignerConf) -> Result<Self, Report> {
@@ -102,23 +147,12 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                 password,
                 signer_key_id,
             } => {
-                let http_config = ethers::signers::yubihsm::HttpConfig {
-                    addr: "127.0.0.1".to_owned(),
-                    port: *port,
-                    timeout_ms: 5000,
-                };
-                let connector = ethers::signers::yubihsm::Connector::http(&http_config);
-
-                let authentication_key =
-                    ethers::signers::yubihsm::authentication::Key::derive_from_password(
-                        password.as_bytes(),
-                    );
-                let credentials = ethers::signers::yubihsm::Credentials::new(
-                    *authentication_key_id,
-                    authentication_key,
+                let signer = get_or_init_yubihsm_signer(
+                    port,
+                    authentication_key_id,
+                    password,
+                    signer_key_id,
                 );
-
-                let signer = YubiWallet::connect(connector, credentials.clone(), *signer_key_id);
                 hyperlane_ethereum::Signers::YubiHsm(signer)
             }
             SignerConf::CosmosKey { .. } => {
