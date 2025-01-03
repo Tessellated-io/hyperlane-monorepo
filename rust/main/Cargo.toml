@@ -158,6 +158,7 @@ warp = "0.3"
 which = "4.3"
 ya-gcp = { version = "0.11.3", features = ["storage"] }
 
+
 ## TODO: remove this
 cosmwasm-schema = "1.2.7"
 
@@ -216,7 +217,7 @@ git = "https://github.com/hyperlane-xyz/ethers-rs"
 tag = "2024-12-16"
 
 [workspace.dependencies.ethers-signers]
-features = ["aws"]
+features = ["aws", "yubi"]
 git = "https://github.com/hyperlane-xyz/ethers-rs"
 tag = "2024-12-16"
 

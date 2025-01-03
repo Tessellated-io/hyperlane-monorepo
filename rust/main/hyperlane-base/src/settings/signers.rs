@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use ed25519_dalek::SecretKey;
-use ethers::prelude::{AwsSigner, LocalWallet};
+use ethers::prelude::{AwsSigner, LocalWallet, YubiWallet};
 use ethers::utils::hex::ToHex;
 use eyre::{bail, Context, Report};
 use hyperlane_core::{AccountAddressType, H256};
@@ -27,6 +27,17 @@ pub enum SignerConf {
         id: String,
         /// The AWS region
         region: Region,
+    },
+    /// A Yubihsm2 signer
+    YubiHsm {
+        // Port to access the YubiHSM HTTP Connector
+        port: u16,
+        // Authentication key id
+        authentication_key_id: u16,
+        // Authentication key password
+        password: String,
+        // Signer key id
+        signer_key_id: u16,
     },
     /// Cosmos Specific key
     CosmosKey {
@@ -84,6 +95,31 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
 
                 let signer = AwsSigner::new(client, id, 0).await?;
                 hyperlane_ethereum::Signers::Aws(signer)
+            }
+            SignerConf::YubiHsm {
+                port,
+                authentication_key_id,
+                password,
+                signer_key_id,
+            } => {
+                let http_config = ethers::signers::yubihsm::HttpConfig {
+                    addr: "127.0.0.1".to_owned(),
+                    port: *port,
+                    timeout_ms: 5000,
+                };
+                let connector = ethers::signers::yubihsm::Connector::http(&http_config);
+
+                let authentication_key =
+                    ethers::signers::yubihsm::authentication::Key::derive_from_password(
+                        password.as_bytes(),
+                    );
+                let credentials = ethers::signers::yubihsm::Credentials::new(
+                    *authentication_key_id,
+                    authentication_key,
+                );
+
+                let signer = YubiWallet::connect(connector, credentials.clone(), *signer_key_id);
+                hyperlane_ethereum::Signers::YubiHsm(signer)
             }
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
