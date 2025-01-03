@@ -25,7 +25,6 @@ use crate::types::utils;
 // lazy_static! {
 //     static ref YUBIHSM_SIGNER: Option<Box<YubiWallet>> = None;
 // }
-static mut YUBIHSM_SIGNER: Option<Box<YubiWallet>> = None;
 
 /// Signer types
 #[derive(Default, Debug, Clone)]
@@ -89,12 +88,14 @@ pub trait BuildableWithSignerConf: Sized + ChainSigner {
     async fn build(conf: &SignerConf) -> Result<Self, Report>;
 }
 
+static mut YUBIHSM_SIGNER: Option<YubiWallet> = None;
+
 fn get_or_init_yubihsm_signer(
     port: &u16,
     authentication_key_id: &u16,
     password: &String,
     signer_key_id: &u16,
-) -> Box<YubiWallet> {
+) -> YubiWallet {
     unsafe {
         if YUBIHSM_SIGNER.is_none() {
             info!("Creating a YubiHSM connection");
@@ -113,11 +114,14 @@ fn get_or_init_yubihsm_signer(
             let signer_instance = YubiWallet::connect(connector, credentials, *signer_key_id);
 
             // Store the Box<YubiWallet> in the static variable
-            YUBIHSM_SIGNER = Some(Box::new(signer_instance));
+            YUBIHSM_SIGNER = Some(signer_instance);
         }
 
-        // Take the Box<YubiWallet> out of the Option and return it
         YUBIHSM_SIGNER.take().unwrap()
+        // Take the Box<YubiWallet> out of the Option and return it
+        // YUBIHSM_SIGNER.take().unwrap()
+
+        // YUBIHSM_SIGNER.as_ref().unwrap().clone()
     }
 }
 
@@ -155,7 +159,9 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                     password,
                     signer_key_id,
                 );
-                hyperlane_ethereum::Signers::YubiHsm(signer)
+
+                let x = hyperlane_ethereum::Signers::YubiHsm(Box::new(signer));
+                x
             }
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
