@@ -3,7 +3,10 @@ use ed25519_dalek::SecretKey;
 use ethers::prelude::{AwsSigner, LocalWallet, YubiWallet};
 use ethers::signers::yubihsm::authentication::Key as AuthenticationKey;
 use ethers::signers::yubihsm::ecdsa::Signer;
-use ethers::signers::yubihsm::{Connector, Credentials, HttpConfig};
+use ethers::signers::yubihsm::{
+    ecdsa::Signer as YubiSigner, Client, Connector, Credentials, HttpConfig,
+};
+use ethers::signers::Wallet;
 use ethers::utils::hex::ToHex;
 use eyre::{bail, Context, Report};
 use hyperlane_core::{AccountAddressType, H256};
@@ -15,6 +18,12 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 use tracing::instrument;
 use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
+// use yubihsm::{
+//     asymmetric::Algorithm::EcK256, object, object::Label, Capability, Client, Connector,
+//     Credentials, Domain,
+// };
+use std::thread;
+use std::time::Duration;
 
 use super::aws_credentials::AwsChainCredentialsProvider;
 use crate::types::utils;
@@ -88,42 +97,38 @@ pub trait BuildableWithSignerConf: Sized + ChainSigner {
     async fn build(conf: &SignerConf) -> Result<Self, Report>;
 }
 
-static mut YUBIHSM_SIGNER: Option<YubiWallet> = None;
+// use std::sync::Once;
 
-fn get_or_init_yubihsm_signer(
-    port: &u16,
-    authentication_key_id: &u16,
-    password: &String,
-    signer_key_id: &u16,
-) -> YubiWallet {
-    unsafe {
-        if YUBIHSM_SIGNER.is_none() {
-            info!("Creating a YubiHSM connection");
+// static INIT: Once = Once::new();
+// static mut YUBIHSM_SIGNER: Option<hyperlane_ethereum::Signers> = None;
 
-            let http_config = HttpConfig {
-                addr: "127.0.0.1".to_owned(),
-                port: *port,
-                timeout_ms: 5000,
-            };
-            let connector = Connector::http(&http_config);
+// fn get_or_init_yubihsm_signer(
+//     port: &u16,
+//     authentication_key_id: &u16,
+//     password: &String,
+//     signer_key_id: &u16,
+// ) -> &'static hyperlane_ethereum::Signers {
+//     unsafe {
+//         INIT.call_once(|| {
+//
 
-            let authentication_key = AuthenticationKey::derive_from_password(password.as_bytes());
-            let credentials = Credentials::new(*authentication_key_id, authentication_key);
+//
+//             let credentials = ethers::signers::yubihsm::Credentials::new(
+//                 *authentication_key_id,
+//                 authentication_key,
+//             );
 
-            // Create a new YubiWallet instance and wrap it in a Box
-            let signer_instance = YubiWallet::connect(connector, credentials, *signer_key_id);
+//             // Initialize the YubiWallet
+//             let signer_instance = YubiWallet::connect(connector, credentials, *signer_key_id);
 
-            // Store the Box<YubiWallet> in the static variable
-            YUBIHSM_SIGNER = Some(signer_instance);
-        }
+//             // Store the signer wrapped in the enum
+//             YUBIHSM_SIGNER = Some(hyperlane_ethereum::Signers::YubiHsm(signer_instance));
+//         });
 
-        YUBIHSM_SIGNER.take().unwrap()
-        // Take the Box<YubiWallet> out of the Option and return it
-        // YUBIHSM_SIGNER.take().unwrap()
-
-        // YUBIHSM_SIGNER.as_ref().unwrap().clone()
-    }
-}
+//         // Return a reference to the initialized signer
+//         YUBIHSM_SIGNER.as_ref().unwrap()
+//     }
+// }
 
 static mut X: Option<hyperlane_ethereum::Signers> = None;
 
@@ -154,20 +159,46 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                 authentication_key_id,
                 password,
                 signer_key_id,
-            } => unsafe {
-                if X.is_none() {
-                    let signer = get_or_init_yubihsm_signer(
-                        port,
-                        authentication_key_id,
-                        password,
-                        signer_key_id,
+            } => {
+                let http_config = ethers::signers::yubihsm::HttpConfig {
+                    addr: "127.0.0.1".to_owned(),
+                    port: *port,
+                    timeout_ms: 5000,
+                };
+                let connector = ethers::signers::yubihsm::Connector::http(&http_config);
+
+                let authentication_key =
+                    ethers::signers::yubihsm::authentication::Key::derive_from_password(
+                        password.as_bytes(),
                     );
+                let credentials = ethers::signers::yubihsm::Credentials::new(
+                    *authentication_key_id,
+                    authentication_key,
+                );
 
-                    X = Some(hyperlane_ethereum::Signers::YubiHsm(Box::new(signer)));
-                }
+                let wallet = YubiWallet::connect(connector, credentials, *signer_key_id);
+                info!(port, "connected to yubihsm2");
 
-                X.unwrap()
-            },
+                // Sleep for 5 seconds to let the connection drop
+                // TODO: doc why
+                thread::sleep(Duration::new(5, 0)); // Sleep for 2 seconds
+
+                // let yubi_client = Client::create(connector, credentials);
+                // let yubi_signer = YubiSigner::create(yubi_client.unwrap(), *signer_key_id).unwrap();
+
+                // // this will never fail
+                // let public_key = PublicKey::from_encoded_point(signer.public_key()).unwrap();
+                // let public_key = public_key.to_encoded_point(/* compress = */ false);
+                // let public_key = public_key.as_bytes();
+                // debug_assert_eq!(public_key[0], 0x04);
+                // let hash = keccak256(&public_key[1..]);
+                // let address = Address::from_slice(&hash[12..]);
+
+                // // Self { signer, address, chain_id: 1 }
+
+                // let wallet = Wallet::new_with_signer(yubi_signer, address, 1);
+                hyperlane_ethereum::Signers::YubiHsm(Box::new(wallet)) //todo: no box
+            }
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
             }
