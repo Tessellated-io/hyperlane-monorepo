@@ -130,7 +130,7 @@ pub trait BuildableWithSignerConf: Sized + ChainSigner {
 //     }
 // }
 
-static mut X: Option<hyperlane_ethereum::Signers> = None;
+static mut X: Option<Client> = None;
 
 #[async_trait]
 impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
@@ -160,45 +160,54 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                 password,
                 signer_key_id,
             } => {
-                let http_config = ethers::signers::yubihsm::HttpConfig {
-                    addr: "127.0.0.1".to_owned(),
-                    port: *port,
-                    timeout_ms: 5000,
-                };
-                let connector = ethers::signers::yubihsm::Connector::http(&http_config);
+                unsafe {
+                    if X.is_none() {
+                        let http_config = ethers::signers::yubihsm::HttpConfig {
+                            addr: "127.0.0.1".to_owned(),
+                            port: *port,
+                            timeout_ms: 5000,
+                        };
+                        let connector = ethers::signers::yubihsm::Connector::http(&http_config);
 
-                let authentication_key =
-                    ethers::signers::yubihsm::authentication::Key::derive_from_password(
-                        password.as_bytes(),
-                    );
-                let credentials = ethers::signers::yubihsm::Credentials::new(
-                    *authentication_key_id,
-                    authentication_key,
-                );
+                        let authentication_key =
+                            ethers::signers::yubihsm::authentication::Key::derive_from_password(
+                                password.as_bytes(),
+                            );
+                        let credentials = ethers::signers::yubihsm::Credentials::new(
+                            *authentication_key_id,
+                            authentication_key,
+                        );
 
-                // let wallet = YubiWallet::connect(connector, credentials, *signer_key_id);
+                        // let wallet = YubiWallet::connect(connector, credentials, *signer_key_id);
 
-                let yubi_client = Client::create(connector, credentials);
-                let yubi_signer = YubiSigner::create(yubi_client.unwrap(), *signer_key_id).unwrap();
-                let wallet2 = Wallet::from(yubi_signer);
-                info!(port, "connected to yubihsm2");
+                        let client_result = Client::create(connector, credentials);
+                        let client = client_result.unwrap();
 
-                // Sleep for 5 seconds to let the connection drop
-                // TODO: doc why
-                // thread::sleep(Duration::new(5, 0)); // Sleep for 2 seconds
+                        X = Some(client);
+                        info!(port, "connected to yubihsm2");
+                    }
 
-                // // this will never fail
-                // let public_key = PublicKey::from_encoded_point(signer.public_key()).unwrap();
-                // let public_key = public_key.to_encoded_point(/* compress = */ false);
-                // let public_key = public_key.as_bytes();
-                // debug_assert_eq!(public_key[0], 0x04);
-                // let hash = keccak256(&public_key[1..]);
-                // let address = Address::from_slice(&hash[12..]);
+                    let x = X.clone();
+                    let yubi_signer = YubiSigner::create(x.unwrap(), *signer_key_id).unwrap();
+                    let wallet2 = Wallet::from(yubi_signer);
 
-                // // Self { signer, address, chain_id: 1 }
+                    // Sleep for 5 seconds to let the connection drop
+                    // TODO: doc why
+                    // thread::sleep(Duration::new(5, 0)); // Sleep for 2 seconds
 
-                // let wallet = Wallet::new_with_signer(yubi_signer, address, 1);
-                hyperlane_ethereum::Signers::YubiHsm(Box::new(wallet2)) //todo: no box
+                    // // this will never fail
+                    // let public_key = PublicKey::from_encoded_point(signer.public_key()).unwrap();
+                    // let public_key = public_key.to_encoded_point(/* compress = */ false);
+                    // let public_key = public_key.as_bytes();
+                    // debug_assert_eq!(public_key[0], 0x04);
+                    // let hash = keccak256(&public_key[1..]);
+                    // let address = Address::from_slice(&hash[12..]);
+
+                    // // Self { signer, address, chain_id: 1 }
+
+                    // let wallet = Wallet::new_with_signer(yubi_signer, address, 1);
+                    hyperlane_ethereum::Signers::YubiHsm(Box::new(wallet2)) //todo: no box
+                }
             }
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
