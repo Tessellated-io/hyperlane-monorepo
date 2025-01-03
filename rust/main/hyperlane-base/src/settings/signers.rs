@@ -176,15 +176,16 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                     authentication_key,
                 );
 
-                let wallet = YubiWallet::connect(connector, credentials, *signer_key_id);
+                // let wallet = YubiWallet::connect(connector, credentials, *signer_key_id);
+
+                let yubi_client = Client::create(connector, credentials);
+                let yubi_signer = YubiSigner::create(yubi_client.unwrap(), *signer_key_id).unwrap();
+                let wallet2 = Wallet::from(yubi_signer);
                 info!(port, "connected to yubihsm2");
 
                 // Sleep for 5 seconds to let the connection drop
                 // TODO: doc why
-                thread::sleep(Duration::new(5, 0)); // Sleep for 2 seconds
-
-                // let yubi_client = Client::create(connector, credentials);
-                // let yubi_signer = YubiSigner::create(yubi_client.unwrap(), *signer_key_id).unwrap();
+                // thread::sleep(Duration::new(5, 0)); // Sleep for 2 seconds
 
                 // // this will never fail
                 // let public_key = PublicKey::from_encoded_point(signer.public_key()).unwrap();
@@ -197,7 +198,7 @@ impl BuildableWithSignerConf for hyperlane_ethereum::Signers {
                 // // Self { signer, address, chain_id: 1 }
 
                 // let wallet = Wallet::new_with_signer(yubi_signer, address, 1);
-                hyperlane_ethereum::Signers::YubiHsm(Box::new(wallet)) //todo: no box
+                hyperlane_ethereum::Signers::YubiHsm(Box::new(wallet2)) //todo: no box
             }
             SignerConf::CosmosKey { .. } => {
                 bail!("cosmosKey signer is not supported by Ethereum")
