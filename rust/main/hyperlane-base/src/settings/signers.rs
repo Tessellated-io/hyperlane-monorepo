@@ -12,6 +12,7 @@ use rusoto_kms::KmsClient;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use tracing::instrument;
+use tracing::{error, info, info_span, instrument::Instrumented, warn, Instrument};
 
 use super::aws_credentials::AwsChainCredentialsProvider;
 use crate::types::utils;
@@ -94,6 +95,8 @@ fn get_or_init_yubihsm_signer(
     let mut signer = YUBIHSM_SIGNER.lock().unwrap();
 
     if signer.is_none() {
+        info!(port, "creating a yubihsm connection");
+
         let http_config = ethers::signers::yubihsm::HttpConfig {
             addr: "127.0.0.1".to_owned(),
             port: *port,
