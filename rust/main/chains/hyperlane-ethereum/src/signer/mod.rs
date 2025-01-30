@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use ethers::prelude::{Address, Signature};
 use ethers::types::transaction::eip2718::TypedTransaction;
 use ethers::types::transaction::eip712::Eip712;
-use ethers_signers::{AwsSigner, AwsSignerError, LocalWallet, Signer, WalletError};
+use ethers_signers::{AwsSigner, AwsSignerError, LocalWallet, Signer, WalletError, YubiWallet};
 
 use hyperlane_core::{
     HyperlaneSigner, HyperlaneSignerError, Signature as HyperlaneSignature, H160, H256,
@@ -12,12 +12,26 @@ mod singleton;
 pub use singleton::*;
 
 /// Ethereum-supported signer types
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Signers {
     /// A wallet instantiated with a locally stored private key
     Local(LocalWallet),
     /// A signer using a key stored in aws kms
     Aws(AwsSigner),
+    /// A signer using a yubihsm
+    YubiHsm(Box<YubiWallet>),
+}
+
+impl Clone for Signers {
+    fn clone(&self) -> Self {
+        match self {
+            Signers::Local(signer) => signer.clone().into(),
+            Signers::Aws(signer) => signer.clone().into(),
+            Signers::YubiHsm(s) => {
+                panic!("cloning a yubihsm signer is not supported");
+            }
+        }
+    }
 }
 
 impl From<LocalWallet> for Signers {
@@ -32,6 +46,12 @@ impl From<AwsSigner> for Signers {
     }
 }
 
+impl From<Box<YubiWallet>> for Signers {
+    fn from(s: Box<YubiWallet>) -> Self {
+        Signers::YubiHsm(s)
+    }
+}
+
 #[async_trait]
 impl Signer for Signers {
     type Error = SignersError;
@@ -43,6 +63,7 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => Ok(signer.sign_message(message).await?),
             Signers::Aws(signer) => Ok(signer.sign_message(message).await?),
+            Signers::YubiHsm(signer) => Ok(signer.sign_message(message).await?),
         }
     }
 
@@ -50,6 +71,7 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => Ok(signer.sign_transaction(message).await?),
             Signers::Aws(signer) => Ok(signer.sign_transaction(message).await?),
+            Signers::YubiHsm(signer) => Ok(signer.sign_transaction(message).await?),
         }
     }
 
@@ -60,6 +82,7 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => Ok(signer.sign_typed_data(payload).await?),
             Signers::Aws(signer) => Ok(signer.sign_typed_data(payload).await?),
+            Signers::YubiHsm(signer) => Ok(signer.sign_typed_data(payload).await?),
         }
     }
 
@@ -67,6 +90,7 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => signer.address(),
             Signers::Aws(signer) => signer.address(),
+            Signers::YubiHsm(signer) => signer.address(),
         }
     }
 
@@ -74,6 +98,7 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => signer.chain_id(),
             Signers::Aws(signer) => signer.chain_id(),
+            Signers::YubiHsm(signer) => signer.chain_id(),
         }
     }
 
@@ -81,6 +106,10 @@ impl Signer for Signers {
         match self {
             Signers::Local(signer) => signer.with_chain_id(chain_id).into(),
             Signers::Aws(signer) => signer.with_chain_id(chain_id).into(),
+            Signers::YubiHsm(signer) => {
+                // Dereference the Box and call with_chain_id on YubiWallet
+                Signers::YubiHsm(Box::new((*signer).with_chain_id(chain_id)))
+            }
         }
     }
 }
