@@ -1,5 +1,13 @@
 # @hyperlane-xyz/helloworld
 
+## 12.5.1
+
+### Patch Changes
+
+- Updated dependencies [f6ed6ad]
+  - @hyperlane-xyz/sdk@12.5.1
+  - @hyperlane-xyz/core@7.1.5
+
 ## 12.5.0
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @hyperlane-xyz/sdk
 
+## 12.5.1
+
+### Patch Changes
+
+- f6ed6ad: Fixed proxy admin ownership transfer logic when the config is not specified in the input file
+  - @hyperlane-xyz/cosmos-sdk@12.5.1
+  - @hyperlane-xyz/utils@12.5.1
+  - @hyperlane-xyz/core@7.1.5
+
 ## 12.5.0
 
 ### Patch Changes
