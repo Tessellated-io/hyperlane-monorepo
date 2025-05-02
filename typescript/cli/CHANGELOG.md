@@ -1,5 +1,11 @@
 # @hyperlane-xyz/cli
 
+## 12.5.1
+
+### Patch Changes
+
+- f6ed6ad: Fixed proxy admin ownership transfer logic when the config is not specified in the input file
+
 ## 12.5.0
 
 ### Minor Changes

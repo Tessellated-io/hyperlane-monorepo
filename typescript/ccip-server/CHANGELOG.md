@@ -1,5 +1,7 @@
 # @hyperlane-xyz/ccip-server
 
+## 12.5.1
+
 ## 12.5.0
 
 ## 12.4.0
